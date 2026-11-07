@@ -2,11 +2,12 @@ from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
 from discord import Colour, Embed, Interaction, app_commands
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Cog, Context
 from rapidfuzz import process
 
 from bot.bot import Bot
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import send_or_reply
 
 log = get_logger(__name__)
@@ -97,23 +98,17 @@ class PythonEnhancementProposals(Cog):
             )
         return embed
 
-    @command(name="pep", aliases=("get_pep", "p"))
+    @hybrid_command(name="pep", aliases=("get_pep", "p"))
+    @app_commands.describe(pep_number="PEP number or title")
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
+        await ctx.defer()
         # Refresh the PEP data up to every hour, as e.g. the PEP status might have changed.
         embed = await self.get_pep_embed(pep_number)
         await send_or_reply(ctx, embed)
 
-    @app_commands.command(name="pep")
-    @app_commands.guild_only()
-    @app_commands.describe(pep_number="PEP number or title")
-    async def pep_slash_command(self, interaction: Interaction, pep_number: int) -> None:
-        """Fetches information about a PEP and sends it to the channel."""
-        embed = await self.get_pep_embed(pep_number)
-        await interaction.response.send_message(embed=embed)
-
-    @pep_slash_command.autocomplete("pep_number")
-    async def pep_slash_command_autocomplete(self, interaction: Interaction, query: str) -> list[app_commands.Choice]:
+    @pep_command.autocomplete("pep_number")
+    async def pep_command_autocomplete(self, interaction: Interaction, query: str) -> list[app_commands.Choice]:
         """Returns a list of PEPs that matches `query`."""
         await self.refresh_pep_data_if_needed()
 

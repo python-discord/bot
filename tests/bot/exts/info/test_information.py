@@ -9,6 +9,7 @@ import discord
 from bot import constants
 from bot.exts.info import information
 from bot.utils.checks import InWhitelistCheckFailure
+from bot.utils.context_menus import ContextMenuDenied
 from tests import helpers
 
 COG_PATH = "bot.exts.info.information.Information"
@@ -72,7 +73,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role))
+        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, [dummy_role, admin_role]))
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -520,6 +521,15 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
 
+    async def test_message_argument_targets_its_author(self, constants):
+        """A regular user should not be able to use the command on the author of a message other than themselves."""
+        constants.MODERATION_ROLES = [self.moderator_role.id]
+        ctx = helpers.MockContext(author=self.author)
+
+        await self.cog.user_info(self.cog, ctx, message=helpers.MockMessage(author=self.target))
+
+        ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
+
     async def test_regular_member_cannot_use_command_outside_of_bot_commands(self, constants):
         """A regular user should not be able to use this command outside of bot-commands."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
@@ -650,3 +660,43 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
                 embed = self.ctx.send.call_args.kwargs["embed"]
                 self.assertEqual(information.DEFAULT_RULES_DESCRIPTION, embed.description)
                 self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
+
+
+class RawJsonMenuTests(unittest.IsolatedAsyncioTestCase):
+    """Tests the gating of the Raw JSON message context menu."""
+
+    def setUp(self):
+        self.cog = information.Information(helpers.MockBot())
+        # Commands only have their cog set once the cog is added to a bot.
+        self.cog.json.cog = self.cog
+        self.message = helpers.MockMessage()
+
+    async def _invoke(self, **kwargs):
+        interaction, ctx = helpers.make_menu_interaction(self.cog.json, **kwargs)
+        ctx.defer = unittest.mock.AsyncMock()
+        self.cog.send_raw_content = unittest.mock.AsyncMock()
+        await self.cog._raw_json_menu_callback(interaction, self.message)
+        return ctx
+
+    async def test_staff_allowed_in_any_channel(self):
+        ctx = await self._invoke(role_ids=(constants.Roles.helpers,), channel_id=42)
+
+        ctx.defer.assert_awaited_once_with(ephemeral=True)
+        self.cog.send_raw_content.assert_awaited_once_with(ctx, self.message, json=True)
+
+    async def test_regular_user_allowed_in_bot_commands(self):
+        ctx = await self._invoke(channel_id=constants.Channels.bot_commands)
+
+        self.cog.send_raw_content.assert_awaited_once_with(ctx, self.message, json=True)
+
+    async def test_regular_user_denied_elsewhere(self):
+        with self.assertRaises(ContextMenuDenied) as cm:
+            await self._invoke(channel_id=42)
+
+        self.assertIn(str(constants.Channels.bot_commands), cm.exception.message)
+        self.cog.send_raw_content.assert_not_awaited()
+
+    def test_menu_is_guild_only_message_menu(self):
+        menu = self.cog.raw_json_menu
+        self.assertEqual(menu.type, discord.AppCommandType.message)
+        self.assertTrue(menu.guild_only)

@@ -5,9 +5,9 @@ from datetime import UTC, timedelta
 import arrow
 import discord
 from dateutil.relativedelta import relativedelta
-from discord import Member
+from discord import Interaction, Member, User, app_commands
 from discord.ext import commands
-from discord.ext.commands import Context, command
+from discord.ext.commands import Context
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
@@ -16,8 +16,11 @@ from bot.constants import Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.infraction._menu import InfractionActionView
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
+from bot.utils.context_menus import ContextMenuDenied, authorise_command, context_menu_error_handler
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -59,11 +62,49 @@ class Infractions(InfractionScheduler, commands.Cog):
         self.category = "Moderation"
         self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
 
+        self.infract_menu = app_commands.ContextMenu(name="Infract user", callback=self._infract_menu_callback)
+        self.infract_menu.default_permissions = discord.Permissions.none()
+        self.infract_menu.error(context_menu_error_handler)
+
+    async def cog_load(self) -> None:
+        """Add the context menu to the command tree, and schedule the expiration of infractions."""
+        self.bot.tree.add_command(self.infract_menu, guild=discord.Object(constants.Guild.id))
+        await super().cog_load()
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree, and cancel scheduled tasks."""
+        self.bot.tree.remove_command(
+            self.infract_menu.name,
+            guild=discord.Object(constants.Guild.id),
+            type=self.infract_menu.type,
+        )
+        await super().cog_unload()
+
+    @app_commands.guild_only()
+    async def _infract_menu_callback(self, interaction: Interaction, user: Member | User) -> None:
+        """Choose an infraction to apply to the user, and then enter its details."""
+        # Gated by the cog check shared by the commands for all infractions. The command of the chosen infraction is
+        # checked again when it is chosen.
+        ctx = await authorise_command(interaction, "warn")
+
+        # As `respect_role_hierarchy` does for the commands which use it.
+        if isinstance(user, Member) and user.top_role >= interaction.user.top_role:
+            raise ContextMenuDenied("You may not infract someone with an equal or higher top role.")
+
+        await interaction.response.send_message(
+            f"Which infraction do you want to apply to {user.mention}?",
+            view=InfractionActionView(self, ctx, user),
+            ephemeral=True,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
     # region: Permanent infractions
 
-    @command(aliases=("warning",))
+    @hybrid_command(aliases=("warning",))
+    @app_commands.describe(user="The user to warn, as a mention or ID", reason="Why the user is being warned")
     async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
         """Warn a user for the given reason."""
+        await _utils.defer_once(ctx)
         if not isinstance(user, Member):
             await ctx.send(":x: The user doesn't appear to be on the server.")
             return
@@ -74,16 +115,23 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @command()
+    @hybrid_command()
+    @app_commands.describe(user="The user to kick, as a mention or ID", reason="Why the user is being kicked")
     async def kick(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
         """Kick a user for the given reason."""
+        await _utils.defer_once(ctx)
         if not isinstance(user, Member):
             await ctx.send(":x: The user doesn't appear to be on the server.")
             return
 
         await self.apply_kick(ctx, user, reason)
 
-    @command()
+    @hybrid_command()
+    @app_commands.describe(
+        user="The user to ban, as a mention or ID",
+        duration_or_expiry="How long the ban lasts, e.g. 1d, or an ISO 8601 timestamp. Permanent if not given",
+        reason="Why the user is being banned",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def ban(
         self,
@@ -100,9 +148,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         Alternatively, an ISO 8601 timestamp representing the expiry time can be provided
         for `duration_or_expiry`.
         """
+        await _utils.defer_once(ctx)
         await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
-    @command(aliases=("clban", "purgeban", "pban"))
+    @hybrid_command(aliases=("clban", "purgeban", "pban"))
+    @app_commands.describe(
+        user="The user to ban, as a mention or ID",
+        duration="How long the ban lasts, e.g. 1d, or an ISO 8601 timestamp. Permanent if not given",
+        reason="Why the user is being banned",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def cleanban(
         self,
@@ -117,6 +171,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
+        await _utils.defer_once(ctx)
         clean_cog: Clean | None = self.bot.get_cog("Clean")
         if clean_cog is None:
             # If we can't get the clean cog, fall back to native purgeban.
@@ -154,12 +209,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         ctx.send = send
         await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
 
-    @command(aliases=("cpban",))
+    @hybrid_command(aliases=("cpban",))
+    @app_commands.describe(user="The user to ban, as a mention or ID")
     async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
+        await _utils.defer_once(ctx)
         await self.cleanban(ctx, user, duration=(arrow.utcnow() + COMP_BAN_DURATION).datetime, reason=COMP_BAN_REASON)
 
-    @command(aliases=("vban",))
+    # There is nothing to run for the commands which aren't implemented, so they are not slash commands.
+    @hybrid_command(aliases=("vban",), with_app_command=False)
     async def voiceban(self, ctx: Context) -> None:
         """
         NOT IMPLEMENTED.
@@ -170,7 +228,12 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `voicemute`?")
 
-    @command(aliases=("vmute",))
+    @hybrid_command(aliases=("vmute",))
+    @app_commands.describe(
+        user="The user to voice mute, as a mention or ID",
+        duration="How long the voice mute lasts, e.g. 1d, or an ISO 8601 timestamp. Permanent if not given",
+        reason="Why the user is being voice muted",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def voicemute(
         self,
@@ -178,19 +241,25 @@ class Infractions(InfractionScheduler, commands.Cog):
         user: UnambiguousMemberOrUser,
         duration: DurationOrExpiry | None = None,
         *,
-        reason: str | None
+        reason: str | None = None
     ) -> None:
         """
         Permanently mute user in voice channels.
 
         If duration is specified, it temporarily voice mutes that user for the given duration.
         """
+        await _utils.defer_once(ctx)
         await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Temporary infractions
 
-    @command(aliases=["mute", "tempmute"])
+    @hybrid_command(aliases=["mute", "tempmute"])
+    @app_commands.describe(
+        user="The user to timeout, as a mention or ID",
+        duration="How long the timeout lasts, e.g. 1d, or an ISO 8601 timestamp. Defaults to 1h",
+        reason="Why the user is being timed out",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def timeout(
         self, ctx: Context,
@@ -216,6 +285,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If no duration is given, a one-hour duration is used by default.
         """  # noqa: RUF002
+        await _utils.defer_once(ctx)
         if not isinstance(user, Member):
             await ctx.send(":x: The user doesn't appear to be on the server.")
             return
@@ -229,7 +299,12 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_timeout(ctx, user, reason, duration_or_expiry=duration)
 
-    @command(aliases=("tban",))
+    @hybrid_command(aliases=("tban",))
+    @app_commands.describe(
+        user="The user to ban, as a mention or ID",
+        duration_or_expiry="How long the ban lasts, e.g. 1d, or an ISO 8601 timestamp",
+        reason="Why the user is being banned",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def tempban(
         self,
@@ -254,9 +329,10 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """  # noqa: RUF002
+        await _utils.defer_once(ctx)
         await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
-    @command(aliases=("tempvban", "tvban"))
+    @hybrid_command(aliases=("tempvban", "tvban"), with_app_command=False)
     async def tempvoiceban(self, ctx: Context) -> None:
         """
         NOT IMPLEMENTED.
@@ -265,7 +341,12 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `tempvoicemute`?")
 
-    @command(aliases=("tempvmute", "tvmute"))
+    @hybrid_command(aliases=("tempvmute", "tvmute"))
+    @app_commands.describe(
+        user="The user to voice mute, as a mention or ID",
+        duration="How long the voice mute lasts, e.g. 1d, or an ISO 8601 timestamp",
+        reason="Why the user is being voice muted",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def tempvoicemute(
         self,
@@ -273,7 +354,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         user: UnambiguousMemberOrUser,
         duration: DurationOrExpiry,
         *,
-        reason: str | None
+        reason: str | None = None
     ) -> None:
         """
         Temporarily voice mute a user for the given reason and duration.
@@ -290,29 +371,39 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """  # noqa: RUF002
+        await _utils.defer_once(ctx)
         await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Permanent shadow infractions
 
-    @command(hidden=True)
+    @hybrid_command(hidden=True)
+    @app_commands.describe(user="The user to add a note to, as a mention or ID", reason="The contents of the note")
     async def note(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
+        await _utils.defer_once(ctx)
         infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
             return
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @command(hidden=True, aliases=["shadowban", "sban"])
+    @hybrid_command(hidden=True, aliases=["shadowban", "sban"])
+    @app_commands.describe(user="The user to ban, as a mention or ID", reason="Why the user is being banned")
     async def shadow_ban(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
+        await _utils.defer_once(ctx)
         await self.apply_ban(ctx, user, reason, hidden=True)
 
     # endregion
     # region: Temporary shadow infractions
 
-    @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
+    @hybrid_command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
+    @app_commands.describe(
+        user="The user to ban, as a mention or ID",
+        duration="How long the ban lasts, e.g. 1d, or an ISO 8601 timestamp",
+        reason="Why the user is being banned",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def shadow_tempban(
         self,
@@ -337,12 +428,17 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """  # noqa: RUF002
+        await _utils.defer_once(ctx)
         await self.apply_ban(ctx, user, reason, duration_or_expiry=duration, hidden=True)
 
     # endregion
     # region: Remove infractions (un- commands)
 
-    @command(aliases=("unmute",))
+    @hybrid_command(aliases=("unmute",))
+    @app_commands.describe(
+        user="The user to remove the timeout from, as a mention or ID",
+        pardon_reason="Why the timeout is being removed",
+    )
     async def untimeout(
         self,
         ctx: Context,
@@ -351,14 +447,20 @@ class Infractions(InfractionScheduler, commands.Cog):
         pardon_reason: str | None = None
     ) -> None:
         """Prematurely end the active timeout infraction for the user."""
+        await _utils.defer_once(ctx)
         await self.pardon_infraction(ctx, "timeout", user, pardon_reason)
 
-    @command()
+    @hybrid_command()
+    @app_commands.describe(
+        user="The user to unban, as a mention or ID",
+        pardon_reason="Why the user is being unbanned",
+    )
     async def unban(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: str) -> None:
         """Prematurely end the active ban infraction for the user."""
+        await _utils.defer_once(ctx)
         await self.pardon_infraction(ctx, "ban", user, pardon_reason)
 
-    @command(aliases=("uvban",))
+    @hybrid_command(aliases=("uvban",), with_app_command=False)
     async def unvoiceban(self, ctx: Context) -> None:
         """
         NOT IMPLEMENTED.
@@ -367,7 +469,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
 
-    @command(aliases=("uvmute",))
+    @hybrid_command(aliases=("uvmute",))
+    @app_commands.describe(
+        user="The user to remove the voice mute from, as a mention or ID",
+        pardon_reason="Why the voice mute is being removed",
+    )
     async def unvoicemute(
         self,
         ctx: Context,
@@ -376,6 +482,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         pardon_reason: str | None = None
     ) -> None:
         """Prematurely end the active voice mute infraction for the user."""
+        await _utils.defer_once(ctx)
         await self.pardon_infraction(ctx, "voice_mute", user, pardon_reason)
 
     # endregion

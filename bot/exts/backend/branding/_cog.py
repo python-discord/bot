@@ -10,6 +10,7 @@ from operator import attrgetter
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
+from discord import app_commands
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
@@ -17,6 +18,7 @@ from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, 
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -256,6 +258,29 @@ class Branding(commands.Cog):
 
         await self.cache_information.set(f"{asset_type.value}s_hash", compound_hash(available_assets))
 
+    async def _make_info_embed(self, *, is_notification: bool) -> tuple[str | None, discord.Embed]:
+        """
+        Make the message content and embed describing the currently cached event.
+
+        When `is_notification` holds, a short contextual message for the #changelog channel is added.
+
+        We read event information from `cache_information`. The caller is therefore responsible for making
+        sure that the cache is up-to-date before calling this function.
+        """
+        description = await self.cache_information.get("event_description")
+        duration = await self.cache_information.get("event_duration")
+
+        if None in (description, duration):
+            content = None
+            embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
+
+        else:
+            content = "Python Discord is entering a new event!" if is_notification else None
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
+            embed.set_footer(text=duration[:4096])
+
+        return content, embed
+
     async def send_info_embed(self, channel_id: int, *, is_notification: bool) -> None:
         """
         Send the currently cached event description to `channel_id`.
@@ -280,18 +305,7 @@ class Branding(commands.Cog):
 
         log.trace(f"Destination channel: #{channel.name}.")
 
-        description = await self.cache_information.get("event_description")
-        duration = await self.cache_information.get("event_duration")
-
-        if None in (description, duration):
-            content = None
-            embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
-
-        else:
-            content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
-            embed.set_footer(text=duration[:4096])
-
+        content, embed = await self._make_info_embed(is_notification=is_notification)
         await channel.send(content=content, embed=embed)
 
     async def enter_event(self, event: Event) -> tuple[bool, bool]:
@@ -502,7 +516,7 @@ class Branding(commands.Cog):
     # endregion
     # region: Command interface (branding)
 
-    @commands.group(name="branding")
+    @hybrid_group(name="branding")
     async def branding_group(self, ctx: commands.Context) -> None:
         """Control the branding cog."""
         if not ctx.invoked_subcommand:
@@ -511,7 +525,9 @@ class Branding(commands.Cog):
     @branding_group.command(name="about", aliases=("current", "event"))
     async def branding_about_cmd(self, ctx: commands.Context) -> None:
         """Show the current event's description and duration."""
-        await self.send_info_embed(ctx.channel.id, is_notification=False)
+        await ctx.defer()
+        content, embed = await self._make_info_embed(is_notification=False)
+        await ctx.send(content=content, embed=embed)
 
     @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.command(name="sync")
@@ -541,7 +557,9 @@ class Branding(commands.Cog):
     # endregion
     # region: Command interface (branding calendar)
 
-    @branding_group.group(name="calendar", aliases=("schedule", "events"))
+    # Slash commands can only be nested one level deep, so the `calendar` subcommands are prefix only.
+    # They are available as the flat `calendar-show` and `calendar-refresh` slash commands below.
+    @branding_group.group(name="calendar", aliases=("schedule", "events"), with_app_command=False)
     async def branding_calendar_group(self, ctx: commands.Context) -> None:
         """
         Show the current event calendar.
@@ -561,11 +579,14 @@ class Branding(commands.Cog):
             # this group, the attribute will be automatically set to None by the framework.
             return
 
+        await ctx.defer()
         available_events = await self.cache_events.to_dict()
         log.trace(f"Found {len(available_events)} cached events available for calendar view.")
 
         if not available_events:
-            resp = make_embed("No events found!", "Cache may be empty, try `branding calendar refresh`.", success=False)
+            resp = make_embed(
+                "No events found!", "Cache may be empty, try `/branding calendar-refresh`.", success=False
+            )
             await ctx.send(embed=resp)
             return
 
@@ -585,7 +606,7 @@ class Branding(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.has_any_role(*MODERATION_ROLES)
-    @branding_calendar_group.command(name="refresh")
+    @branding_calendar_group.command(name="refresh", with_app_command=False)
     async def branding_calendar_refresh_cmd(self, ctx: commands.Context) -> None:
         """
         Refresh event cache and show current event calendar.
@@ -615,17 +636,30 @@ class Branding(commands.Cog):
 
         await ctx.send(embed=resp)
 
+    @branding_group.command(name="calendar-show")
+    async def branding_calendar_slash(self, ctx: commands.Context) -> None:
+        """Show the current event calendar."""
+        await self.branding_calendar_group(ctx)
+
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_group.command(name="calendar-refresh")
+    async def branding_calendar_refresh_slash(self, ctx: commands.Context) -> None:
+        """Refresh event cache and show current event calendar."""
+        await self.branding_calendar_refresh_cmd(ctx)
+
     # endregion
     # region: Command interface (branding daemon)
 
+    # Slash commands can only be nested one level deep, so the `daemon` subcommands are prefix only.
+    # They are available as the flat `daemon-set` and `daemon-status` slash commands below.
     @commands.has_any_role(*MODERATION_ROLES)
-    @branding_group.group(name="daemon", aliases=("d",))
+    @branding_group.group(name="daemon", aliases=("d",), with_app_command=False)
     async def branding_daemon_group(self, ctx: commands.Context) -> None:
         """Control the branding cog's daemon."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @branding_daemon_group.command(name="enable", aliases=("start", "on"))
+    @branding_daemon_group.command(name="enable", with_app_command=False, aliases=("start", "on"))
     async def branding_daemon_enable_cmd(self, ctx: commands.Context) -> None:
         """Enable the branding daemon."""
         await self.cache_information.set("daemon_active", True)
@@ -638,7 +672,7 @@ class Branding(commands.Cog):
 
         await ctx.send(embed=resp)
 
-    @branding_daemon_group.command(name="disable", aliases=("stop", "off"))
+    @branding_daemon_group.command(name="disable", with_app_command=False, aliases=("stop", "off"))
     async def branding_daemon_disable_cmd(self, ctx: commands.Context) -> None:
         """Disable the branding daemon."""
         await self.cache_information.set("daemon_active", False)
@@ -651,14 +685,30 @@ class Branding(commands.Cog):
 
         await ctx.send(embed=resp)
 
-    @branding_daemon_group.command(name="status")
+    @branding_daemon_group.command(name="status", with_app_command=False)
     async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
         """Check whether the daemon is currently enabled."""
         if self.daemon_loop.is_running():
-            resp = make_embed("Daemon is enabled", "Use `branding daemon disable` to stop.", success=True)
+            resp = make_embed("Daemon is enabled", "Use `/branding daemon-set` to stop.", success=True)
         else:
-            resp = make_embed("Daemon is disabled", "Use `branding daemon enable` to start.", success=False)
+            resp = make_embed("Daemon is disabled", "Use `/branding daemon-set` to start.", success=False)
 
         await ctx.send(embed=resp)
+
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_group.command(name="daemon-set")
+    @app_commands.describe(enabled="Whether the branding daemon should be enabled")
+    async def branding_daemon_set_slash(self, ctx: commands.Context, enabled: bool) -> None:
+        """Enable or disable the branding daemon."""
+        if enabled:
+            await self.branding_daemon_enable_cmd(ctx)
+        else:
+            await self.branding_daemon_disable_cmd(ctx)
+
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_group.command(name="daemon-status")
+    async def branding_daemon_status_slash(self, ctx: commands.Context) -> None:
+        """Check whether the daemon is currently enabled."""
+        await self.branding_daemon_status_cmd(ctx)
 
     # endregion

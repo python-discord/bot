@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
+from discord import Embed, Forbidden, app_commands
 from discord.ext.commands import errors
 from pydis_core.site_api import ResponseCodeError
 
@@ -110,7 +111,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.reset_mock()
         error = errors.CommandOnCooldown(10, 9, type=None)
         self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
-        self.ctx.send.assert_awaited_once_with(error)
+        self.ctx.send.assert_awaited_once_with(error, ephemeral=True)
 
     async def test_error_handler_command_invoke_error(self):
         """Should call `handle_api_error` or `handle_unexpected_error` depending on original error."""
@@ -203,7 +204,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
             "voice_channels": [MockVoiceChannel(), MockVoiceChannel()],
         }
         self.guild = MockGuild(**guild_overrides)
-        self.ctx = MockContext(bot=self.bot, guild=self.guild)
+        self.ctx = MockContext(bot=self.bot, guild=self.guild, prefix="<@1> ")
         self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_try_silence_get_command(self):
@@ -256,7 +257,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
                 self.ctx.invoked_with = "shh"
 
-                self.ctx.message.content = f"!shh {channel.name} {kick if kick is not None else ''}"
+                self.ctx.message.content = f"<@1> shh {channel.name} {kick if kick is not None else ''}"
                 self.ctx.guild.text_channels = [channel]
 
                 self.assertTrue(await self.cog.try_silence(self.ctx))
@@ -271,7 +272,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         """If the words after the command could not be converted to a channel, None should be passed as channel."""
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
         self.ctx.invoked_with = "shh"
-        self.ctx.message.content = "!shh not_a_channel true"
+        self.ctx.message.content = "<@1> shh not_a_channel true"
 
         self.assertTrue(await self.cog.try_silence(self.ctx))
         self.ctx.invoke.assert_awaited_once_with(
@@ -297,7 +298,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
 
                 self.ctx.invoked_with = invoke
-                self.ctx.message.content = f"!{invoke}"
+                self.ctx.message.content = f"<@1> {invoke}"
                 if channel is not None:
                     self.ctx.message.content += f" {channel.name}"
                     self.ctx.guild.text_channels = [channel]
@@ -311,7 +312,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
 
         self.ctx.invoked_with = "unshh"
-        self.ctx.message.content = "!unshh not_a_channel"
+        self.ctx.message.content = "<@1> unshh not_a_channel"
 
         self.assertTrue(await self.cog.try_silence(self.ctx))
         self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence, channel=None)
@@ -533,6 +534,126 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
                 scope_mock.set_tag.assert_has_calls(set_tag_calls)
                 scope_mock.set_extra.assert_has_calls(set_extra_calls)
+
+
+class HybridErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for error handling of hybrid commands invoked as slash commands."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.ctx = MockContext(bot=self.bot, interaction=MagicMock())
+        self.cog = error_handler.ErrorHandler(self.bot)
+
+    @staticmethod
+    def _hybrid_error(app_error_cls, original):
+        """Build a `HybridCommandError` the way discord.py does for a failing callback."""
+        app_error = app_error_cls.__new__(app_error_cls)
+        Exception.__init__(app_error)
+        app_error.__cause__ = original
+        hybrid = errors.HybridCommandError(app_error)
+        hybrid.__cause__ = app_error
+        return hybrid
+
+    async def test_hybrid_invoke_error_is_unwrapped(self):
+        """A `HybridCommandError` wrapping an exception should be handled like a `CommandInvokeError`."""
+        self.cog.handle_api_error = AsyncMock()
+        original = ResponseCodeError(MagicMock(status=404))
+        error = self._hybrid_error(app_commands.CommandInvokeError, original)
+
+        await self.cog.on_command_error(self.ctx, error)
+
+        self.cog.handle_api_error.assert_awaited_once_with(self.ctx, original)
+
+    async def test_hybrid_transformer_error_is_unwrapped(self):
+        """The cause of a `TransformerError` should be handled as an unexpected error."""
+        self.cog.handle_unexpected_error = AsyncMock()
+        original = ValueError("boom")
+        error = self._hybrid_error(app_commands.TransformerError, original)
+
+        await self.cog.on_command_error(self.ctx, error)
+
+        self.cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, original)
+
+    async def test_hybrid_error_without_cause_is_reported(self):
+        """An app command error with no underlying exception should still produce a response."""
+        self.cog.handle_unexpected_error = AsyncMock()
+        app_error = app_commands.AppCommandError("nope")
+        error = errors.HybridCommandError(app_error)
+
+        await self.cog.on_command_error(self.ctx, error)
+
+        self.cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, app_error)
+
+    async def test_forbidden_does_not_use_synthetic_message(self):
+        """`handle_forbidden_from_block` should not be given the synthetic message for slash commands."""
+        forbidden = Forbidden(MagicMock(status=403), "error")
+        with patch("bot.exts.backend.error_handler.handle_forbidden_from_block", new=AsyncMock()) as handler:
+            await self.cog.on_command_error(self.ctx, errors.CommandInvokeError(forbidden))
+
+        handler.assert_awaited_once_with(forbidden, None)
+
+    async def test_user_input_error_is_ephemeral_with_help(self):
+        """Input errors for slash commands should be ephemeral and include the help embed."""
+        help_embed = Embed(title="help")
+        self.bot.get_cog.return_value.formatter.command_formatting = AsyncMock(return_value=(help_embed, None))
+        error_embed = Embed(title="error")
+
+        await self.cog.send_error_with_help(self.ctx, error_embed)
+
+        self.ctx.send.assert_awaited_once_with(embeds=[error_embed, help_embed], ephemeral=True)
+
+    async def test_help_formatter_failure_falls_back_to_error_embed(self):
+        """If the help embed cannot be built the plain error embed should be sent."""
+        self.bot.get_cog.return_value.formatter.command_formatting = AsyncMock(side_effect=RuntimeError)
+        error_embed = Embed(title="error")
+
+        await self.cog.send_error_with_help(self.ctx, error_embed)
+
+        self.ctx.send.assert_awaited_once_with(embed=error_embed, ephemeral=True)
+
+    async def test_unexpected_error_slash_scope(self):
+        """Sentry and logs should not use the invocation message for slash commands."""
+        self.ctx.interaction.id = 99
+        with (
+            patch("bot.exts.backend.error_handler.new_scope") as new_scope,
+            patch("bot.exts.backend.error_handler.log"),
+        ):
+            scope = Mock()
+            new_scope.return_value.__enter__.return_value = scope
+            await self.cog.handle_unexpected_error(self.ctx, errors.CommandError())
+
+        self.assertTrue(self.ctx.send.call_args.kwargs["ephemeral"])
+        scope.set_tag.assert_any_call("interaction_id", 99)
+        scope.set_extra.assert_any_call("full_message", f"/{self.ctx.command.qualified_name}")
+        self.assertNotIn("jump_to", [c.args[0] for c in scope.set_extra.call_args_list])
+
+
+class AppCommandErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the command tree error handler."""
+
+    def setUp(self):
+        self.handler = error_handler.AppCommandErrorHandler()
+        self.interaction = MagicMock()
+        self.interaction.response.send_message = AsyncMock()
+        self.interaction.followup.send = AsyncMock()
+
+    async def test_responds_to_unanswered_interaction(self):
+        """A signature mismatch should produce an ephemeral response."""
+        self.interaction.response.is_done.return_value = False
+        error = app_commands.CommandSignatureMismatch(MagicMock())
+        await self.handler.handle_app_command_error(self.interaction, error)
+
+        self.interaction.response.send_message.assert_awaited_once()
+        self.assertTrue(self.interaction.response.send_message.call_args.kwargs["ephemeral"])
+
+    async def test_uses_followup_when_already_responded(self):
+        """If the interaction was already acknowledged a followup should be used."""
+        self.interaction.response.is_done.return_value = True
+        with patch("bot.exts.backend.error_handler.log"):
+            await self.handler.handle_app_command_error(self.interaction, RuntimeError("boom"))
+
+        self.interaction.followup.send.assert_awaited_once()
+        self.interaction.response.send_message.assert_not_awaited()
 
 
 class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):

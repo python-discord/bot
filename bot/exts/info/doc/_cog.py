@@ -4,10 +4,10 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Literal
 
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.scheduling import Scheduler
@@ -17,6 +17,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput, Roles
 from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.hybrid import hybrid_group
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 
@@ -45,6 +46,16 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 COMMAND_LOCK_SINGLETON = "inventory refresh"
+
+
+class PackageNameOrWildcard(commands.Converter):
+    """Converts to a valid package name, or `*`, which stands for all packages."""
+
+    async def convert(self, ctx: commands.Context, argument: str) -> str:
+        """Return `argument` if it is `*` or a valid package name."""
+        if argument == "*":
+            return argument
+        return await PackageName.convert(ctx, argument)
 
 
 class DocCog(commands.Cog):
@@ -292,23 +303,24 @@ class DocCog(commands.Cog):
             embed.set_footer(text=footer_text)
             return embed
 
-    @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
+    # The slash command for looking up a symbol is `/docs getdoc`, so this group doesn't need a fallback.
+    @hybrid_group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
+    async def docs_group(self, ctx: commands.Context, *, symbol_name: str | None = None) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
 
     @docs_group.command(name="getdoc", aliases=("g",))
-    async def get_command(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
+    @app_commands.describe(symbol_name="The symbol to look up, or leave empty to list all inventories")
+    async def get_command(self, ctx: commands.Context, *, symbol_name: str | None = None) -> None:
         """
         Return a documentation embed for a given symbol.
 
         If no symbol is given, return a list of all available inventories.
 
         Examples:
-            !docs
-            !docs aiohttp
-            !docs aiohttp.ClientSession
-            !docs getdoc aiohttp.ClientSession
+            /docs getdoc
+            /docs getdoc aiohttp
+            /docs getdoc aiohttp.ClientSession
         """
         if not symbol_name:
             inventory_embed = discord.Embed(
@@ -333,8 +345,13 @@ class DocCog(commands.Cog):
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
 
+                if ctx.interaction is not None:
+                    # There is no invocation message to delete.
+                    with suppress(discord.NotFound):
+                        await error_message.delete()
+
                 # Make sure that we won't cause a ghost-ping by deleting the message
-                if not (ctx.message.mentions or ctx.message.role_mentions):
+                elif not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
                         await error_message.delete()
@@ -349,6 +366,11 @@ class DocCog(commands.Cog):
         return inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
 
     @docs_group.command(name="setdoc", aliases=("s",))
+    @app_commands.describe(
+        package_name="The name of the package",
+        inventory="The URL of the objects.inv file of the package",
+        base_url="The base URL of the documentation, ending in a slash. Defaults to the inventory URL's parent",
+    )
     @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
@@ -365,10 +387,11 @@ class DocCog(commands.Cog):
         If the base url is not specified, a default created by removing the last segment of the inventory url is used.
 
         Example:
-            !docs setdoc \
+            /docs setdoc \
                     python \
                     https://docs.python.org/3/objects.inv
         """
+        await ctx.defer()
         if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
@@ -399,6 +422,7 @@ class DocCog(commands.Cog):
         await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
+    @app_commands.describe(package_name="The name of the package to remove")
     @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
@@ -406,8 +430,9 @@ class DocCog(commands.Cog):
         Removes the specified package from the database.
 
         Example:
-            !docs deletedoc aiohttp
+            /docs deletedoc aiohttp
         """
+        await ctx.defer()
         await self.bot.api_client.delete(f"bot/documentation-links/{package_name}")
 
         async with ctx.typing():
@@ -438,11 +463,12 @@ class DocCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
+    @app_commands.describe(package_name="The name of the package, or * to clear the cache of all packages")
     @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: PackageName | Literal["*"]
+        package_name: PackageNameOrWildcard
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):

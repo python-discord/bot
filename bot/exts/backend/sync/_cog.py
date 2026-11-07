@@ -11,6 +11,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 MAX_ATTEMPTS = 3
@@ -183,7 +184,7 @@ class Sync(Cog):
             # A 404 likely means the user is in another guild.
             await self.patch_user(after.id, json=updated_information, ignore_404=True)
 
-    @commands.group(name="sync")
+    @hybrid_group(name="sync")
     @commands.has_permissions(administrator=True)
     async def sync_group(self, ctx: Context) -> None:
         """Run synchronizations between the bot and site manually."""

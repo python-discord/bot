@@ -7,7 +7,17 @@ import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter, IDConverter, MemberConverter, UserConverter
+from discord.ext.commands import (
+    BadArgument,
+    BadUnionArgument,
+    CommandError,
+    Context,
+    Converter,
+    IDConverter,
+    MemberConverter,
+    ObjectConverter,
+    UserConverter,
+)
 from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import unqualify
@@ -425,6 +435,72 @@ class Infraction(Converter):
             raise e
 
 
+MemberOrUser = discord.Member | discord.User
+
+
+class UnionConverter(Converter):
+    """
+    Base for converters which try each of `converters` in order, using the first one that succeeds.
+
+    This behaves like a `Union` annotation of the converters for prefix commands, but as a single converter
+    class so that it can also be used in hybrid commands, where it is a string option for slash commands.
+    """
+
+    converters: tuple[type[Converter], ...]
+
+    async def convert(self, ctx: Context, argument: str) -> t.Any:
+        """Convert `argument` using the first of the converters which succeeds."""
+        errors = []
+        for converter in self.converters:
+            try:
+                return await converter().convert(ctx, argument)
+            except CommandError as exc:
+                errors.append(exc)
+
+        raise BadUnionArgument(ctx.current_parameter, self.converters, errors)
+
+
+class Expiry(UnionConverter):
+    """Converts a duration string into a datetime in the future, or an ISO-8601 datetime string."""
+
+    converters = (Duration, ISODateTime)
+
+
+class DurationOrExpiry(UnionConverter):
+    """Converts a duration string into a relativedelta, or an ISO-8601 datetime string into a datetime."""
+
+    converters = (DurationDelta, ISODateTime)
+
+
+class UnambiguousMemberOrUser(UnionConverter):
+    """Converts a user mention or ID into a `discord.Member`, falling back to a `discord.User`."""
+
+    converters = (UnambiguousMember, UnambiguousUser)
+
+
+class MemberOrUserOrObject(UnionConverter):
+    """Converts to a `discord.Member` or `discord.User` if one is found, or else to a `discord.Object` of an ID."""
+
+    converters = (MemberConverter, UserConverter, ObjectConverter)
+
+
+class _Integer(Converter):
+    """Converts a string of digits to an `int`."""
+
+    async def convert(self, ctx: Context, argument: str) -> int:
+        """Convert the `argument` to an `int`."""
+        try:
+            return int(argument)
+        except ValueError:
+            raise BadArgument(f"`{argument}` is not a valid integer.")
+
+
+class NomineeOrNominationID(UnionConverter):
+    """Converts a user mention or ID into a `discord.Member` or `discord.User`, or else a number into an `int`."""
+
+    converters = (UnambiguousMember, UnambiguousUser, _Integer)
+
+
 if t.TYPE_CHECKING:
     ValidFilterListType = str
     Extension = str
@@ -442,8 +518,8 @@ if t.TYPE_CHECKING:
     UnambiguousUser = discord.User
     UnambiguousMember = discord.Member
     Infraction = dict | None
-
-Expiry = Duration | ISODateTime
-DurationOrExpiry = DurationDelta | ISODateTime
-MemberOrUser = discord.Member | discord.User
-UnambiguousMemberOrUser = UnambiguousMember | UnambiguousUser
+    Expiry = datetime
+    DurationOrExpiry = relativedelta | datetime
+    UnambiguousMemberOrUser = discord.Member | discord.User
+    MemberOrUserOrObject = discord.Member | discord.User | discord.Object
+    NomineeOrNominationID = discord.Member | discord.User | int

@@ -6,8 +6,9 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from discord import Interaction
-from discord.ext.commands import Cog, Context, Greedy, group
+from discord import Interaction, app_commands
+from discord.ext import commands
+from discord.ext.commands import Cog, Context, Greedy
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.members import get_or_fetch_member
@@ -30,6 +31,8 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
+from bot.utils.hybrid import hybrid_group
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 
@@ -210,6 +213,45 @@ class OptInReminderMentionView(discord.ui.View):
         )
 
 
+class RemindMeModal(discord.ui.Modal, title="Remind me"):
+    """A modal asking when to be reminded about a message."""
+
+    duration = discord.ui.TextInput(
+        label="When should the reminder arrive?",
+        placeholder="e.g. 3d1M for 3 days and 1 minute",
+        max_length=50,
+    )
+
+    def __init__(self, cog: Reminders, ctx: Context, message: discord.Message):
+        super().__init__()
+        self.cog = cog
+        self.ctx = ctx
+        self.message = message
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        """Create the reminder through the same code as `/remind create`."""
+        ctx = self.ctx
+        # Respond to the modal submission rather than to the menu invocation.
+        ctx.interaction = interaction
+
+        try:
+            expiration = await Duration().convert(ctx, self.duration.value)
+        except commands.BadArgument as e:
+            await interaction.response.send_message(f":x: {e}", ephemeral=True)
+            return
+
+        await ctx.defer()
+        # As when replying to a message, a message without text content is reminded about by referencing it.
+        content = self.message.content or "*See referenced message.*"
+        await self.cog.create_reminder(
+            ctx, mentions=[], expiration=expiration, content=content, jump_url=self.message.jump_url
+        )
+
+    async def on_error(self, interaction: Interaction, error: Exception) -> None:
+        """Handle any exceptions in the processing of the modal."""
+        await context_menu_error_handler(interaction, error)
+
+
 class Reminders(Cog):
     """Provide in-channel reminder functionality."""
 
@@ -217,12 +259,21 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
+        self.remind_me_menu = app_commands.ContextMenu(name="Remind me", callback=self._remind_me_menu_callback)
+        self.remind_me_menu.error(context_menu_error_handler)
+
     async def cog_unload(self) -> None:
-        """Cancel scheduled tasks."""
+        """Cancel scheduled tasks and remove the context menu."""
         self.scheduler.cancel_all()
+        self.bot.tree.remove_command(
+            self.remind_me_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.remind_me_menu.type,
+        )
 
     async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
+        self.bot.tree.add_command(self.remind_me_menu, guild=discord.Object(Guild.id))
         await self.bot.wait_until_guild_available()
         response = await self.bot.api_client.get(
             "bot/reminders",
@@ -405,6 +456,10 @@ class Reminders(Cog):
 
         Differs from pydis_core.utils.commands.clean_text_or_reply as allows for messages with no content.
         """
+        if ctx.interaction is not None:
+            # There is no message which could be replied to when using a slash command.
+            raise commands.BadArgument("You must provide the content of the reminder.")
+
         content = None
         if reference := ctx.message.reference:
             if isinstance((resolved_message := reference.resolved), discord.Message):
@@ -417,14 +472,26 @@ class Reminders(Cog):
 
         return content
 
-    @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
+    @hybrid_group(
+        name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True, fallback="create"
+    )
+    @app_commands.describe(
+        mentions="Members or roles to also remind, separated by spaces",
+        expiration="When the reminder should arrive, e.g. 3d1M",
+        content="What to remind you about",
+    )
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str | None = None
+        self,
+        ctx: Context,
+        mentions: Greedy[ReminderMention] = None,
+        expiration: Duration = None,
+        *,
+        content: str | None = None,
     ) -> None:
         """
         Commands for managing your reminders.
 
-        The `expiration` duration of `!remind new` supports the following symbols for each unit of time:
+        The `expiration` duration of `/remind create` supports the following symbols for each unit of time:
         - years: `Y`, `y`, `year`, `years`
         - months: `m`, `month`, `months`
         - weeks: `w`, `W`, `week`, `weeks`
@@ -433,11 +500,19 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        For example, to set a reminder that expires in 3 days and 1 minute,
+        you can do `/remind create 3d1M Do something`.
         """
-        await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
+        if expiration is None:
+            # The parameter has a default so that the slash command can accept optional mentions before it.
+            raise commands.MissingRequiredArgument(ctx.command.params["expiration"])
 
-    @remind_group.command(name="new", aliases=("add", "create"))
+        await ctx.defer()
+        await self.new_reminder(ctx, mentions=mentions or [], expiration=expiration, content=content)
+
+    # The slash command for this is the fallback (`/remind create`) of the group above. The fallback can't share
+    # this command's name, as discord.py removes the fallback when re-adding this command to the group.
+    @remind_group.command(name="new", aliases=("add", "create"), with_app_command=False)
     async def new_reminder(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str | None = None
     ) -> None:
@@ -453,7 +528,30 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        For example, to set a reminder that expires in 3 days and 1 minute,
+        you can do `/remind create 3d1M Do something`.
+        """
+        await self.create_reminder(ctx, mentions, expiration, content)
+
+    @app_commands.guild_only()
+    async def _remind_me_menu_callback(self, interaction: Interaction, message: discord.Message) -> None:
+        """Ask when to be reminded about the message, then create the reminder."""
+        # Gated in the same way as the `remind new` command.
+        ctx = await authorise_command(interaction, "remind new")
+        await interaction.response.send_modal(RemindMeModal(self, ctx, message))
+
+    async def create_reminder(
+        self,
+        ctx: Context,
+        mentions: t.Iterable[Mentionable],
+        expiration: datetime,
+        content: str | None = None,
+        jump_url: str | None = None,
+    ) -> None:
+        """
+        Create a reminder for the author of `ctx` and confirm it.
+
+        `jump_url` is the link to include in the reminder, which defaults to the message of the context.
         """
         # If the user is not staff or part of the python community,
         # we need to verify whether or not to make a reminder at all.
@@ -499,7 +597,7 @@ class Reminders(Cog):
             json={
                 "author": ctx.author.id,
                 "channel_id": ctx.message.channel.id,
-                "jump_url": ctx.message.jump_url,
+                "jump_url": jump_url or ctx.message.jump_url,
                 "content": content,
                 "expiration": expiration.isoformat(),
                 "mentions": mention_ids,
@@ -525,6 +623,7 @@ class Reminders(Cog):
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context) -> None:
         """View a paginated embed of all reminders for your user."""
+        await ctx.defer()
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
             "bot/reminders",
@@ -542,7 +641,7 @@ class Reminders(Cog):
 
         lines = []
 
-        for content, remind_at, id_, mentions in reminders:
+        for content, remind_at, reminder_id, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
             expiry = time.format_relative(remind_at)
 
@@ -553,7 +652,7 @@ class Reminders(Cog):
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires {expiry}* (ID: {id_}){mention_string}
+            **Reminder #{reminder_id}:** *expires {expiry}* (ID: {reminder_id}){mention_string}
             {content}
             """).strip()
 
@@ -579,13 +678,17 @@ class Reminders(Cog):
             max_lines=3,
         )
 
-    @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `edit` subcommands are prefix only.
+    # They are available as the flat `edit-duration`, `edit-content` and `edit-mentions` slash commands below.
+    @remind_group.group(
+        name="edit", aliases=("change", "modify"), invoke_without_command=True, with_app_command=False
+    )
     async def edit_reminder_group(self, ctx: Context) -> None:
         """Commands for modifying your current reminders."""
         await ctx.send_help(ctx.command)
 
-    @edit_reminder_group.command(name="duration", aliases=("time",))
-    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
+    @edit_reminder_group.command(name="duration", aliases=("time",), with_app_command=False)
+    async def edit_reminder_duration(self, ctx: Context, reminder_id: int, expiration: Duration) -> None:
         """
         Edit one of your reminder's expiration.
 
@@ -598,15 +701,15 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `/remind edit-duration 1234 3d1M`.
         """
         formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
         message = f"It will arrive on {formatted_time}."
 
-        await self.edit_reminder(ctx, id_, {"expiration": expiration.isoformat()}, message)
+        await self.edit_reminder(ctx, reminder_id, {"expiration": expiration.isoformat()}, message)
 
-    @edit_reminder_group.command(name="content", aliases=("reason",))
-    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str | None = None) -> None:
+    @edit_reminder_group.command(name="content", aliases=("reason",), with_app_command=False)
+    async def edit_reminder_content(self, ctx: Context, reminder_id: int, *, content: str | None = None) -> None:
         """
         Edit one of your reminder's content.
 
@@ -615,10 +718,10 @@ class Reminders(Cog):
         if not content:
             content = await self.try_get_content_from_reply(ctx)
 
-        await self.edit_reminder(ctx, id_, {"content": content})
+        await self.edit_reminder(ctx, reminder_id, {"content": content})
 
-    @edit_reminder_group.command(name="mentions", aliases=("pings",))
-    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[ReminderMention]) -> None:
+    @edit_reminder_group.command(name="mentions", aliases=("pings",), with_app_command=False)
+    async def edit_reminder_mentions(self, ctx: Context, reminder_id: int, mentions: Greedy[ReminderMention]) -> None:
         """Edit one of your reminder's mentions."""
         # Remove duplicate mentions
         mentions = set(mentions)
@@ -629,49 +732,80 @@ class Reminders(Cog):
             return
 
         mention_ids = [mention.id for mention in mentions]
-        await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
+        await self.edit_reminder(ctx, reminder_id, {"mentions": mention_ids})
 
-    @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
-    async def edit_reminder(self, ctx: Context, id_: int, payload: dict, message: str = "") -> None:
+    @remind_group.command(name="edit-duration")
+    @app_commands.describe(
+        reminder_id="The ID of the reminder to edit",
+        expiration="When the reminder should arrive, e.g. 3d1M",
+    )
+    async def edit_reminder_duration_slash(self, ctx: Context, reminder_id: int, expiration: Duration) -> None:
+        """Edit one of your reminder's expiration."""
+        await ctx.defer()
+        await self.edit_reminder_duration(ctx, reminder_id, expiration)
+
+    @remind_group.command(name="edit-content")
+    @app_commands.describe(reminder_id="The ID of the reminder to edit", content="The new content of the reminder")
+    async def edit_reminder_content_slash(self, ctx: Context, reminder_id: int, *, content: str) -> None:
+        """Edit one of your reminder's content."""
+        await ctx.defer()
+        await self.edit_reminder_content(ctx, reminder_id, content=content)
+
+    @remind_group.command(name="edit-mentions")
+    @app_commands.describe(
+        reminder_id="The ID of the reminder to edit",
+        mentions="Members or roles to also remind, separated by spaces. Leave empty to remove all mentions",
+    )
+    async def edit_reminder_mentions_slash(
+        self, ctx: Context, reminder_id: int, mentions: Greedy[ReminderMention] = None
+    ) -> None:
+        """Edit one of your reminder's mentions."""
+        await ctx.defer()
+        await self.edit_reminder_mentions(ctx, reminder_id, mentions or [])
+
+    @lock_arg(LOCK_NAMESPACE, "reminder_id", raise_error=True)
+    async def edit_reminder(self, ctx: Context, reminder_id: int, payload: dict, message: str = "") -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
-        if not await self._can_modify(ctx, id_):
+        if not await self._can_modify(ctx, reminder_id):
             return
-        reminder = await self._edit_reminder(id_, payload)
+        reminder = await self._edit_reminder(reminder_id, payload)
 
         # Send a confirmation message to the channel
         await self._send_confirmation(
             ctx,
             on_success=" ".join(("That reminder has been edited successfully!", message)).rstrip(),
-            reminder_id=id_,
+            reminder_id=reminder_id,
         )
         await self._reschedule_reminder(reminder)
 
-    @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
-    async def _delete_reminder(self, ctx: Context, id_: int) -> bool:
-        """Acquires a lock on `id_` and returns `True` if reminder is deleted, otherwise `False`."""
-        if not await self._can_modify(ctx, id_, send_on_denial=False):
+    @lock_arg(LOCK_NAMESPACE, "reminder_id", raise_error=True)
+    async def _delete_reminder(self, ctx: Context, reminder_id: int) -> bool:
+        """Acquires a lock on `reminder_id` and returns `True` if reminder is deleted, otherwise `False`."""
+        if not await self._can_modify(ctx, reminder_id, send_on_denial=False):
             return False
 
-        await self.bot.api_client.delete(f"bot/reminders/{id_}")
-        self.scheduler.cancel(id_)
+        await self.bot.api_client.delete(f"bot/reminders/{reminder_id}")
+        self.scheduler.cancel(reminder_id)
         return True
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
+    @app_commands.describe(ids="The IDs of the reminders to delete, separated by spaces")
     async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
         """Delete up to (and including) 5 of your active reminders."""
+        await ctx.defer()
         if len(ids) > 5:
             await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
             return
 
         deleted_ids = []
-        for id_ in set(ids):
+        for reminder_id in set(ids):
             try:
-                reminder_deleted = await self._delete_reminder(ctx, id_)
+                reminder_deleted = await self._delete_reminder(ctx, reminder_id)
             except LockedResourceError:
                 continue
             else:
                 if reminder_deleted:
-                    deleted_ids.append(str(id_))
+                    deleted_ids.append(str(reminder_id))
 
         if deleted_ids:
             colour = discord.Colour.green()

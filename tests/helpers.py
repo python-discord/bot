@@ -5,11 +5,12 @@ import unittest.mock
 from asyncio import AbstractEventLoop
 from collections.abc import Iterable
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from functools import cached_property
 
 import discord
 from aiohttp import ClientSession
-from discord.ext.commands import Context
+from discord.ext.commands import Command, Context
 from pydis_core.async_stats import AsyncStatsClient
 from pydis_core.site_api import APIClient
 
@@ -515,6 +516,8 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.guild = kwargs.get("guild", self.channel.guild)
 
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
+        self.interaction = kwargs.get("interaction")
+        self.prefix = kwargs.get("prefix", "")
 
 
 class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
@@ -686,3 +689,27 @@ def no_create_task():
     with unittest.mock.patch("pydis_core.utils.scheduling.create_task") as create_task:
         create_task.side_effect = side_effect
         yield
+
+
+def make_menu_interaction(
+    command: Command,
+    *,
+    role_ids: tuple[int, ...] = (),
+    channel_id: int = 1234,
+) -> tuple[MockInteraction, MockContext]:
+    """
+    Create an interaction, and the context built from it, for testing the gating of a context menu.
+
+    The invoker has the roles `role_ids` and is in the channel `channel_id`.
+    `bot.get_command` is mocked to return `command`, whatever name it is asked for.
+    """
+    member = MockMember(roles=[MockRole(id=role_id) for role_id in role_ids])
+    channel = MockTextChannel(id=channel_id)
+    message = MockMessage(author=member, channel=channel, created_at=datetime.now(UTC))
+    interaction = MockInteraction(user=member, channel=channel)
+    ctx = MockContext(author=member, channel=channel, message=message, bot=interaction.client)
+    ctx.bot._before_invoke = None
+
+    interaction.client.get_command = unittest.mock.MagicMock(return_value=command)
+    interaction.client.get_context = unittest.mock.AsyncMock(return_value=ctx)
+    return interaction, ctx

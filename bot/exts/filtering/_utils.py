@@ -239,6 +239,8 @@ class FakeContext:
     guild: discord.Guild | None = None
     author: discord.Member | discord.User | None = None
     me: discord.Member | None = None
+    # A fake context is never created from an interaction, but commands check for one.
+    interaction: discord.Interaction | None = None
 
     def __post_init__(self):
         """Initialize the missing information."""
@@ -254,6 +256,9 @@ class FakeContext:
     async def send(self, *args, **kwargs) -> discord.Message:
         """A wrapper for channel.send."""
         return await self.channel.send(*args, **kwargs)
+
+    async def defer(self, **_) -> None:
+        """Do nothing, as there is no interaction to defer. This allows commands to defer unconditionally."""
 
 
 class CustomIOField:

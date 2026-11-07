@@ -3,6 +3,7 @@
 import contextlib
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 from pydis_core.utils import scheduling
 
@@ -11,6 +12,7 @@ from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel
 from bot.log import get_logger
 from bot.utils.checks import has_any_role_check
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -65,7 +67,7 @@ class HelpForum(commands.Cog):
             self.bot.stats.incr("help.dormant_invoke.staff")
         return has_role
 
-    @commands.group(name="help-forum", aliases=("hf",))
+    @hybrid_group(name="help-forum", aliases=("hf",))
     async def help_forum_group(self,  ctx: commands.Context) -> None:
         """A group of commands that help manage our help forum system."""
         if not ctx.invoked_subcommand:
@@ -78,23 +80,38 @@ class HelpForum(commands.Cog):
 
         May only be invoked by the channel's claimant or by mods+.
         """
+        await ctx.defer(ephemeral=True)
+
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info("Close command invoked by %s in #%s.", ctx.author, ctx.channel)
             await _channel.help_post_closed(ctx.channel, self.scheduler)
+            if ctx.interaction is not None:
+                await ctx.send(":white_check_mark: Closed this help post.", ephemeral=True)
+        elif ctx.interaction is not None:
+            await ctx.send(":x: You can't close this channel.", ephemeral=True)
 
     @help_forum_group.command(name="title", root_aliases=("title",))
+    @app_commands.describe(title="The new title of the help post")
     async def rename_help_post(self, ctx: commands.Context, *, title: str) -> None:
         """Rename the help post to the provided title."""
+        await ctx.defer(ephemeral=True)
+
         if not _channel.is_help_forum_post(ctx.channel):
             # Silently fail in channels other than help posts
+            if ctx.interaction is not None:
+                await ctx.send(":x: This command can only be used in help posts.", ephemeral=True)
             return
 
         if not await has_any_role_check(ctx, constants.Roles.helpers):
             # Silently fail for non-helpers
+            if ctx.interaction is not None:
+                await ctx.send(":x: Only helpers can rename help posts.", ephemeral=True)
             return
 
         await ctx.channel.edit(name=title)
+        if ctx.interaction is not None:
+            await ctx.send(":white_check_mark: Renamed the help post.", ephemeral=True)
 
     @commands.Cog.listener("on_message")
     async def new_post_listener(self, message: discord.Message) -> None:

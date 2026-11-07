@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Literal
 
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
-from discord import TextChannel, Thread
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord import TextChannel, Thread, app_commands
+from discord.ext.commands import Cog, Context, has_any_role
 from pydis_core.utils.channel import get_or_fetch_channel
 from pydis_core.utils.scheduling import Scheduler
 
@@ -13,6 +12,7 @@ from bot.constants import Channels, Emojis, MODERATION_ROLES
 from bot.converters import Duration, DurationDelta
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -27,6 +27,16 @@ COMMONLY_SLOWMODED_CHANNELS = {
 MessageHolder = TextChannel | Thread | None
 
 
+class SlowmodeDelay(DurationDelta):
+    """Converts a duration string into a relativedelta, additionally accepting `0s` or `0seconds` for no delay."""
+
+    async def convert(self, ctx: Context, duration: str) -> relativedelta:
+        """Convert `duration` to a relativedelta, treating `0s` and `0seconds` as a delay of zero."""
+        if duration in ("0s", "0seconds"):
+            return relativedelta(seconds=0)
+        return await super().convert(ctx, duration)
+
+
 class Slowmode(Cog):
     """Commands for getting and setting slowmode delays of text channels."""
 
@@ -39,13 +49,14 @@ class Slowmode(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-    @group(name="slowmode", aliases=["sm"], invoke_without_command=True)
+    @hybrid_group(name="slowmode", aliases=["sm"], invoke_without_command=True)
     async def slowmode_group(self, ctx: Context) -> None:
         """Get or set the slowmode delay for the text channel this was invoked in or a given text channel."""
         await ctx.send_help(ctx.command)
 
     @slowmode_group.command(name="get", aliases=["g"])
-    async def get_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
+    @app_commands.describe(channel="The channel to get the slowmode delay of. Defaults to the current channel")
+    async def get_slowmode(self, ctx: Context, channel: MessageHolder = None) -> None:
         """Get the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -62,11 +73,16 @@ class Slowmode(Cog):
             await ctx.send(f"The slowmode delay for {channel.mention} is {humanized_delay}.")
 
     @slowmode_group.command(name="set", aliases=["s"])
+    @app_commands.describe(
+        channel="The channel to set the slowmode delay of",
+        delay="The slowmode delay, e.g. 30s or 1h. Use 0s to remove the slowmode",
+        expiry="How long until the slowmode reverts to the original delay, e.g. 1h",
+    )
     async def set_slowmode(
         self,
         ctx: Context,
         channel: MessageHolder,
-        delay: DurationDelta | Literal["0s", "0seconds"],
+        delay: SlowmodeDelay,
         expiry: Duration | None = None
     ) -> None:
         """
@@ -75,15 +91,14 @@ class Slowmode(Cog):
         Supports temporary slowmodes with the `expiry` argument that automatically
         revert to the original delay after expiration.
         """
+        await ctx.defer()
+
         # Use the channel this command was invoked in if one was not given
         if channel is None:
             channel = ctx.channel
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
-        if isinstance(delay, str):
-            delay = relativedelta(seconds=0)
-
         slowmode_delay = int(time.relativedelta_to_timedelta(delay).total_seconds())
         humanized_delay = time.humanize_delta(delay)
 
@@ -176,7 +191,8 @@ class Slowmode(Cog):
         await self.slowmode_cache.delete(channel.id)
 
     @slowmode_group.command(name="reset", aliases=["r"])
-    async def reset_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
+    @app_commands.describe(channel="The channel to reset the slowmode delay of. Defaults to the current channel")
+    async def reset_slowmode(self, ctx: Context, channel: MessageHolder = None) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
         await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 

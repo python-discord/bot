@@ -5,11 +5,11 @@ import discord
 from discord.ext import commands, tasks
 from pydis_core.utils.channel import get_or_fetch_channel
 
-from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, Guild, Roles, STAFF_AND_COMMUNITY_ROLES
 from bot.decorators import in_whitelist
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -96,7 +96,7 @@ class Patreon(commands.Cog):
 
         await channel.send(embeds=(main_embed, *embed_list))
 
-    @commands.group("patreon", aliases=("patron",), invoke_without_command=True)
+    @hybrid_group("patreon", aliases=("patron",), invoke_without_command=True, fallback="info")
     async def patreon_info(self, ctx: commands.Context) -> None:
         """Send information about how Python Discord uses Patreon."""
         embed = discord.Embed(
@@ -104,7 +104,7 @@ class Patreon(commands.Cog):
             description=(
                 PATREON_INFORMATION +
                 "\n\nTo see our current supporters, run " +
-                f"`{constants.Bot.prefix}patreon supporters` in <#{Channels.bot_commands}>"
+                f"`/patreon supporters` in <#{Channels.bot_commands}>"
             )
         )
         await ctx.send(embed=embed)
@@ -113,7 +113,8 @@ class Patreon(commands.Cog):
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_AND_COMMUNITY_ROLES)
     async def patreon_supporters(self, ctx: commands.Context) -> None:
         """Sends the current list of patreon supporters, sorted by tier level."""
-        await self.send_current_supporters(ctx.channel)
+        await ctx.defer()
+        await self.send_current_supporters(ctx)
 
     @tasks.loop(time=datetime.time(hour=17))
     async def current_monthly_supporters(self) -> None:

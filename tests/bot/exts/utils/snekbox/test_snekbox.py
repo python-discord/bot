@@ -3,7 +3,7 @@ import unittest
 from base64 import b64encode
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
-from discord import AllowedMentions
+from discord import AllowedMentions, MessageType
 from discord.ext import commands
 from pydis_core.utils.paste_service import MAX_PASTE_SIZE
 
@@ -328,6 +328,21 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.format_output.assert_called_once_with("")
         self.cog.upload_output.assert_not_called()
 
+    async def test_send_job_slash_command_does_not_reply(self):
+        """A slash command responds to the interaction instead of replying to the invocation message."""
+        ctx = MockContext(interaction=MagicMock())
+        ctx.send = AsyncMock()
+
+        self.cog.post_job = AsyncMock(return_value=EvalResult("", 0))
+        self.cog.format_output = AsyncMock(return_value=("[No output]", None))
+        self.bot.get_cog.return_value = None
+
+        await self.cog.send_job(ctx, EvalJob.from_code("MyAwesomeCode"))
+
+        ctx.send.assert_called_once()
+        self.assertNotIn("reference", ctx.send.call_args.kwargs)
+        self.assertNotIn("<@", ctx.send.call_args.args[0])
+
     async def test_send_job_with_paste_link(self):
         """Test the send_job function with a too long output that generate a paste link."""
         ctx = MockContext()
@@ -456,6 +471,15 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         actual = await self.cog.continue_job(ctx, MockMessage(), self.cog.eval_command)
         self.assertEqual(actual, None)
         ctx.message.clear_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
+
+    async def test_continue_job_slash_command_does_not_continue(self):
+        """A job from a slash command cannot be re-evaluated, as there is no message to edit."""
+        ctx = MockContext(message=MockMessage(type=MessageType.chat_input_command))
+
+        actual = await self.cog.continue_job(ctx, MockMessage(), self.cog.eval_command)
+
+        self.assertIsNone(actual)
+        self.bot.wait_for.assert_not_called()
 
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""

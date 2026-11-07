@@ -1,6 +1,7 @@
 import gettext
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.members import get_or_fetch_member
@@ -11,6 +12,7 @@ from bot.converters import UnambiguousMemberOrUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
+from bot.utils.hybrid import hybrid_group
 from bot.utils.time import discord_timestamp
 
 log = get_logger(__name__)
@@ -58,7 +60,14 @@ class AlternateAccounts(commands.Cog):
             )
         return lines
 
-    @commands.group(name="association", aliases=("alt", "assoc"), invoke_without_command=True)
+    @hybrid_group(
+        name="association", aliases=("alt", "assoc"), invoke_without_command=True, fallback="create"
+    )
+    @app_commands.describe(
+        user_1="The first account",
+        user_2="The second account, believed to be an alt of the first",
+        context="Why the accounts are believed to be alts",
+    )
     async def association_group(
         self,
         ctx: commands.Context,
@@ -73,6 +82,7 @@ class AlternateAccounts(commands.Cog):
         When called directly marks the two users given as alt accounts.
         The context as to why they are believed to be alt accounts must be given.
         """
+        await ctx.defer()
         if user_1.bot or user_2.bot:
             await ctx.send(":x: Cannot mark bots as alts")
             return
@@ -89,6 +99,11 @@ class AlternateAccounts(commands.Cog):
         await ctx.send(f"✅ {user_1.mention} and {user_2.mention} successfully marked as alts.")
 
     @association_group.command(name="edit", aliases=("e",))
+    @app_commands.describe(
+        user_1="The first account",
+        user_2="The second account",
+        context="The new context for the association",
+    )
     async def edit_association_command(
         self,
         ctx: commands.Context,
@@ -98,6 +113,7 @@ class AlternateAccounts(commands.Cog):
         context: str,
     ) -> None:
         """Edit the context of an association between two users."""
+        await ctx.defer()
         try:
             await self.bot.api_client.patch(
                 f"bot/users/{user_1.id}/alts",
@@ -110,6 +126,7 @@ class AlternateAccounts(commands.Cog):
         await ctx.send(f"✅ Context for association between {user_1.mention} and {user_2.mention} updated.")
 
     @association_group.command(name="remove", aliases=("r",))
+    @app_commands.describe(user_1="The first account", user_2="The second account")
     async def alt_remove_command(
         self,
         ctx: commands.Context,
@@ -117,6 +134,7 @@ class AlternateAccounts(commands.Cog):
         user_2: UnambiguousMemberOrUser,
     ) -> None:
         """Remove the alt association between the two users."""
+        await ctx.defer()
         try:
             await self.bot.api_client.delete(
                 f"bot/users/{user_1.id}/alts",
@@ -129,12 +147,14 @@ class AlternateAccounts(commands.Cog):
         await ctx.send(f"✅ {user_1.mention} and {user_2.mention} are no longer marked as alts.")
 
     @association_group.command(name="info", root_aliases=("alts",))
+    @app_commands.describe(user="The user to show the known alts of")
     async def alt_info_command(
         self,
         ctx: commands.Context,
         user: UnambiguousMemberOrUser,
     ) -> None:
         """Output a list of known alts of this user, and the reasons as to why they are believed to be alts."""
+        await ctx.defer()
         try:
             resp = await self.bot.api_client.get(f"bot/users/{user.id}")
         except ResponseCodeError as e:
