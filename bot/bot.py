@@ -51,11 +51,18 @@ class Bot(BotBase):
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
+        self._finished_extensions: set[str] = set()
+        self._extensions_finished_loading = asyncio.Event()
 
     async def load_extension(self, name: str, *args, **kwargs) -> None:
         """Extend D.py's load_extension function to also record sentry performance stats."""
-        with start_transaction(op="cog-load", name=name):
-            await super().load_extension(name, *args, **kwargs)
+        try:
+            with start_transaction(op="cog-load", name=name):
+                await super().load_extension(name, *args, **kwargs)
+        finally:
+            self._finished_extensions.add(name)
+            if self.all_extensions and self._finished_extensions.issuperset(self.all_extensions):
+                self._extensions_finished_loading.set()
 
     async def ping_services(self) -> None:
         """A helper to make sure all the services the bot relies on are available on startup."""
@@ -80,7 +87,10 @@ class Bot(BotBase):
 
     async def _sync_app_commands(self) -> None:
         """Sync application commands to the bot's guild only, clearing any previously registered global commands."""
+        # The base class only waits for the extension loading tasks to be created, not for them to finish. Cogs that
+        # do work in `cog_load` (e.g. fetching from the site API) only register their commands once that completes.
         await self._extension_loading_task
+        await self._extensions_finished_loading.wait()
         guild = discord.Object(self.guild_id)
         self.tree.copy_global_to(guild=guild)
         self.tree.clear_commands(guild=None)

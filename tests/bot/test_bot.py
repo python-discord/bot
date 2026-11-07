@@ -1,7 +1,8 @@
+import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from bot.bot import BotContext
+from bot.bot import Bot, BotContext
 from bot.exts.info.help import HelpFormatter
 
 
@@ -33,3 +34,25 @@ class BotContextSendHelpTests(unittest.IsolatedAsyncioTestCase):
         """Nothing happens, and nothing raises, when the help cog isn't loaded."""
         self.bot.get_cog.return_value = None
         await self.ctx.send_help()
+
+
+class ExtensionLoadingTests(unittest.IsolatedAsyncioTestCase):
+    """Tests that syncing waits until every extension has finished loading."""
+
+    def setUp(self):
+        self.bot = Bot.__new__(Bot)
+        self.bot.all_extensions = frozenset({"a", "b"})
+        self.bot._finished_extensions = set()
+        self.bot._extensions_finished_loading = asyncio.Event()
+
+    async def test_event_set_only_after_all_extensions_finish(self):
+        """The event is set once every extension has finished, including failed loads."""
+        with patch("bot.bot.BotBase.load_extension", new_callable=AsyncMock) as load:
+            await self.bot.load_extension("a")
+            self.assertFalse(self.bot._extensions_finished_loading.is_set())
+
+            load.side_effect = RuntimeError
+            with self.assertRaises(RuntimeError):
+                await self.bot.load_extension("b")
+
+        self.assertTrue(self.bot._extensions_finished_loading.is_set())
