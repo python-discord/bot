@@ -15,6 +15,7 @@ from discord.ext.commands import (
     Converter,
     IDConverter,
     MemberConverter,
+    ObjectConverter,
     UserConverter,
 )
 from discord.utils import snowflake_time
@@ -477,6 +478,12 @@ class UnambiguousMemberOrUser(_UnionConverter):
     converters = (UnambiguousMember, UnambiguousUser)
 
 
+class MemberOrUserOrObject(_UnionConverter):
+    """Converts to a `discord.Member` or `discord.User` if one is found, or else to a `discord.Object` of an ID."""
+
+    converters = (MemberConverter, UserConverter, ObjectConverter)
+
+
 if t.TYPE_CHECKING:
     ValidFilterListType = str
     Extension = str
@@ -497,3 +504,4 @@ if t.TYPE_CHECKING:
     Expiry = datetime
     DurationOrExpiry = relativedelta | datetime
     UnambiguousMemberOrUser = discord.Member | discord.User
+    MemberOrUserOrObject = discord.Member | discord.User | discord.Object
