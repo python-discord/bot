@@ -2,13 +2,14 @@ import enum
 import inspect
 from pathlib import Path
 
-from discord import Embed
+from discord import Embed, app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.exts.info.tags import TagIdentifier
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import send_or_reply
 
 SourceObject = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
@@ -29,7 +30,8 @@ class BotSource(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="source", aliases=("src",))
+    @hybrid_command(name="source", aliases=("src",))
+    @app_commands.describe(source_item="The name of a command, tag or cog. Leave empty for the repository link")
     async def source_command(
         self,
         ctx: commands.Context,
