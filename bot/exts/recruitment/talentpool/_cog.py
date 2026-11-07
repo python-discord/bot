@@ -21,10 +21,13 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_group
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
+# The most characters in a page of the nomination history sent by the context menu, within the embed limit.
+HISTORY_PAGE_SIZE = 3900
 
 # The number of days that a user can have no activity (no messages sent)
 # until they should be removed from the talentpool.
@@ -120,8 +123,14 @@ class TalentPool(Cog, name="Talentpool"):
         self.nominate_user_context_menu.error(self._nominate_context_error)
         self.bot.tree.add_command(self.nominate_user_context_menu, guild=discord.Object(Guild.id))
 
+        self.history_menu = app_commands.ContextMenu(name="Talentpool history", callback=self._history_menu_callback)
+        self.history_menu.default_permissions = discord.Permissions.none()
+        self.history_menu.error(context_menu_error_handler)
+
     async def cog_load(self) -> None:
         """Start autoreview loop if enabled."""
+        self.bot.tree.add_command(self.history_menu, guild=discord.Object(Guild.id))
+
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
 
@@ -624,9 +633,9 @@ class TalentPool(Cog, name="Talentpool"):
     async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
         await ctx.defer()
-        result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
+        lines = await self._get_nomination_history(user)
 
-        if not result:
+        if not lines:
             await ctx.send(f":warning: {user.mention} has never been nominated.")
             return
 
@@ -634,7 +643,6 @@ class TalentPool(Cog, name="Talentpool"):
             title=f"Nominations for {user.display_name} `({user.id})`",
             color=Color.blue()
         )
-        lines = [await self._nomination_to_string(nomination) for nomination in result]
         await LinePaginator.paginate(
             lines,
             ctx=ctx,
@@ -644,6 +652,48 @@ class TalentPool(Cog, name="Talentpool"):
             max_size=1000,
             allowed_roles=MODERATION_ROLES,
         )
+
+    async def _get_nomination_history(self, user: MemberOrUser) -> list[str]:
+        """Return the lines describing each nomination of the user, with the active one first."""
+        result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
+        return [await self._nomination_to_string(nomination) for nomination in result]
+
+    @app_commands.guild_only()
+    async def _history_menu_callback(self, interaction: discord.Interaction, user: Member | User) -> None:
+        """Show the nomination history of the user, as `talentpool history` does."""
+        # Gated in the same way as the `talentpool history` command.
+        ctx = await authorise_command(interaction, "talentpool history")
+        # The command paginates with reactions, which can't be added to an ephemeral message.
+        await ctx.defer(ephemeral=True)
+
+        lines = await self._get_nomination_history(user)
+        if not lines:
+            await ctx.send(f":warning: {user.mention} has never been nominated.")
+            return
+
+        title = f"Nominations for {user.display_name} `({user.id})`"
+        for page in self._history_pages(lines):
+            await ctx.send(embed=Embed(title=title, description=page, color=Color.blue()))
+            # Only the first message can be the deferred response, the rest are ephemeral followups.
+            title = "Nominations (continued)"
+
+    @staticmethod
+    def _history_pages(lines: list[str]) -> list[str]:
+        """Join `lines` into pages that fit in the description of an embed."""
+        pages = []
+        current = ""
+        for line in lines:
+            # A single nomination can be longer than a page.
+            chunks = [line[i:i + HISTORY_PAGE_SIZE] for i in range(0, len(line), HISTORY_PAGE_SIZE)] or [""]
+            for chunk in chunks:
+                if current and len(current) + len(chunk) + 2 > HISTORY_PAGE_SIZE:
+                    pages.append(current)
+                    current = chunk
+                else:
+                    current = f"{current}\n\n{chunk}" if current else chunk
+        if current:
+            pages.append(current)
+        return pages
 
     @nomination_group.command(name="end", aliases=("unwatch", "unnominate"), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES, Roles.founders)
@@ -1065,4 +1115,9 @@ class TalentPool(Cog, name="Talentpool"):
             self.nominate_user_context_menu.name,
             guild=discord.Object(Guild.id),
             type=self.nominate_user_context_menu.type
+        )
+        self.bot.tree.remove_command(
+            self.history_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.history_menu.type
         )
