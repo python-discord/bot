@@ -595,7 +595,7 @@ class HybridErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_user_input_error_is_ephemeral_with_help(self):
         """Input errors for slash commands should be ephemeral and include the help embed."""
         help_embed = Embed(title="help")
-        self.bot.help_command.command_formatting = AsyncMock(return_value=(help_embed, None))
+        self.bot.get_cog.return_value.formatter.command_formatting = AsyncMock(return_value=(help_embed, None))
         error_embed = Embed(title="error")
 
         await self.cog.send_error_with_help(self.ctx, error_embed)
@@ -604,7 +604,7 @@ class HybridErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_help_formatter_failure_falls_back_to_error_embed(self):
         """If the help embed cannot be built the plain error embed should be sent."""
-        self.bot.help_command.command_formatting = AsyncMock(side_effect=RuntimeError)
+        self.bot.get_cog.return_value.formatter.command_formatting = AsyncMock(side_effect=RuntimeError)
         error_embed = Embed(title="error")
 
         await self.cog.send_error_with_help(self.ctx, error_embed)

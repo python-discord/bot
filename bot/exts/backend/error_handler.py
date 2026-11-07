@@ -392,13 +392,14 @@ class ErrorHandler(Cog):
         """Send error message, with button to show command help."""
         # Fall back to just sending the error embed if the custom help cog isn't loaded yet.
         # ctx.command shouldn't be None here, but check just to be safe.
-        help_embed_creator = getattr(self.bot.help_command, "command_formatting", None)
+        formatter = getattr(self.bot.get_cog("Help"), "formatter", None)
+        help_embed_creator = getattr(formatter, "command_formatting", None)
         if not help_embed_creator or not ctx.command:
             await ctx.send(embed=error_embed, ephemeral=True)
             return
 
         try:
-            self.bot.help_command.context = ctx
+            formatter.context = ctx
             help_embed, _ = await help_embed_creator(ctx.command)
         except Exception:
             log.exception("Failed to build the help embed for command %s", ctx.command)
