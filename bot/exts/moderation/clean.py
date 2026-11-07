@@ -9,17 +9,20 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Literal, TYPE_CHECKING
 
-from discord import Colour, Message, NotFound, TextChannel, Thread, User, app_commands, errors
+import discord
+from discord import Colour, Interaction, Message, NotFound, TextChannel, Thread, User, app_commands, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, has_any_role
 from discord.ext.commands.converter import MessageConverter, TextChannelConverter
 from discord.ext.commands.errors import BadArgument
+from pydis_core.utils.interactions import ViewWithUserAndRoleCheck
 
 from bot.bot import Bot
-from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
+from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Guild, Icons, MODERATION_ROLES
 from bot.converters import Age, ISODateTime, UnionConverter
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.messages import upload_log
 from bot.utils.modlog import send_log_message
@@ -78,6 +81,33 @@ if TYPE_CHECKING:  # Used to allow method resolution in IDEs like in converters.
     PurgeAge = datetime
 
 
+class CleanUntilConfirmationView(ViewWithUserAndRoleCheck):
+    """An ephemeral confirmation, as the context menu makes it easy to start cleaning a channel by accident."""
+
+    def __init__(self, cog: Clean, ctx: Context, message: Message):
+        super().__init__(allowed_users=(ctx.author.id,), allowed_roles=(), timeout=60)
+        self.cog = cog
+        self.ctx = ctx
+        self.message = message
+
+    @discord.ui.button(label="Clean", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Start cleaning, responding to the original menu interaction from here on."""
+        self.stop()
+        await interaction.response.edit_message(content="Cleaning...", view=None)
+        await self.cog.clean_until_from_menu(self.ctx, self.message)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Do not clean anything."""
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled.", view=None)
+
+    async def on_error(self, interaction: Interaction, error: Exception, item: discord.ui.Item) -> None:
+        """Handle any exceptions in the callbacks of the view."""
+        await context_menu_error_handler(interaction, error)
+
+
 class Clean(Cog):
     """
     A cog that allows messages to be deleted in bulk while applying various filters.
@@ -92,6 +122,24 @@ class Clean(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.cleaning = False
+
+        self.clean_until_menu = app_commands.ContextMenu(
+            name="Clean until here", callback=self._clean_until_menu_callback
+        )
+        self.clean_until_menu.default_permissions = discord.Permissions.none()
+        self.clean_until_menu.error(context_menu_error_handler)
+
+    async def cog_load(self) -> None:
+        """Add the context menu to the command tree."""
+        self.bot.tree.add_command(self.clean_until_menu, guild=discord.Object(Guild.id))
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree."""
+        self.bot.tree.remove_command(
+            self.clean_until_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.clean_until_menu.type,
+        )
 
     @property
     def mod_log(self) -> ModLog:
@@ -659,6 +707,25 @@ class Clean(Cog):
             channels=[channel] if channel else None,
             first_limit=until,
         )
+
+    @app_commands.guild_only()
+    async def _clean_until_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """Ask for confirmation to delete all messages after the selected message, as `clean until` does."""
+        # Gated in the same way as the `clean until` command.
+        ctx = await authorise_command(interaction, "clean until")
+        await interaction.response.send_message(
+            f"Delete all messages in this channel after {message.jump_url}?",
+            view=CleanUntilConfirmationView(self, ctx, message),
+            ephemeral=True,
+        )
+
+    async def clean_until_from_menu(self, ctx: Context, message: Message) -> None:
+        """Run `clean until` for the message selected in the context menu."""
+        try:
+            await self._clean_messages(ctx, channels=None, first_limit=message)
+        except Exception:
+            self.cleaning = False
+            raise
 
     @clean_group.command(name="between", aliases=["after-until", "from-to"])
     @app_commands.describe(

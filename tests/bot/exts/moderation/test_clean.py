@@ -1,7 +1,11 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from bot.exts.moderation.clean import Clean
+import discord
+
+from bot.constants import MODERATION_ROLES, Roles
+from bot.exts.moderation.clean import Clean, CleanUntilConfirmationView
+from bot.utils.context_menus import ContextMenuDenied
 from tests.helpers import (
     MockBot,
     MockContext,
@@ -11,6 +15,7 @@ from tests.helpers import (
     MockMessage,
     MockRole,
     MockTextChannel,
+    make_menu_interaction,
 )
 
 
@@ -148,3 +153,77 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
         sent_message = mocked_mods.send.await_args[0][0]
         self.assertIn(self.log_url, sent_message)
         self.assertIn("2 messages", sent_message)
+
+
+class CleanUntilMenuTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the Clean until here message context menu."""
+
+    def setUp(self):
+        self.cog = Clean(MockBot())
+        # Commands only have their cog set once the cog is added to a bot.
+        self.command = self.cog.clean_group.get_command("until")
+        self.command.cog = self.cog
+        self.message = MockMessage()
+
+    def test_menu_is_guild_only_message_menu(self):
+        menu = self.cog.clean_until_menu
+        self.assertEqual(menu.type, discord.AppCommandType.message)
+        self.assertTrue(menu.guild_only)
+
+    async def test_moderator_is_asked_to_confirm(self):
+        interaction, _ = make_menu_interaction(self.command, role_ids=(MODERATION_ROLES[0],))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        await self.cog._clean_until_menu_callback(interaction, self.message)
+
+        interaction.response.send_message.assert_awaited_once()
+        kwargs = interaction.response.send_message.await_args.kwargs
+        self.assertTrue(kwargs["ephemeral"])
+        self.assertIsInstance(kwargs["view"], CleanUntilConfirmationView)
+
+    async def test_non_moderator_is_denied(self):
+        interaction, _ = make_menu_interaction(self.command, role_ids=(Roles.helpers,))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        with self.assertRaises(ContextMenuDenied):
+            await self.cog._clean_until_menu_callback(interaction, self.message)
+
+        interaction.response.send_message.assert_not_called()
+
+    async def test_confirming_cleans_until_the_message(self):
+        ctx = MockContext()
+        self.cog._clean_messages = AsyncMock()
+        view = CleanUntilConfirmationView(self.cog, ctx, self.message)
+        interaction = MockInteraction()
+        interaction.response = MagicMock(edit_message=AsyncMock())
+
+        await view.confirm.callback(interaction)
+
+        self.cog._clean_messages.assert_awaited_once_with(ctx, channels=None, first_limit=self.message)
+
+    async def test_cancelling_does_not_clean(self):
+        self.cog._clean_messages = AsyncMock()
+        view = CleanUntilConfirmationView(self.cog, MockContext(), self.message)
+        interaction = MockInteraction()
+        interaction.response = MagicMock(edit_message=AsyncMock())
+
+        await view.cancel.callback(interaction)
+
+        self.cog._clean_messages.assert_not_called()
+
+    async def test_only_the_invoker_may_confirm(self):
+        ctx = MockContext()
+        view = CleanUntilConfirmationView(self.cog, ctx, self.message)
+        interaction = MockInteraction(user=MockMember(id=ctx.author.id + 1))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        self.assertFalse(await view.interaction_check(interaction))
+
+    async def test_error_while_cleaning_releases_the_lock(self):
+        self.cog._clean_messages = AsyncMock(side_effect=RuntimeError)
+        self.cog.cleaning = True
+
+        with self.assertRaises(RuntimeError):
+            await self.cog.clean_until_from_menu(MockContext(), self.message)
+
+        self.assertFalse(self.cog.cleaning)
