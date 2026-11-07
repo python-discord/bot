@@ -1,10 +1,11 @@
 import json
 from collections import OrderedDict
-from contextlib import suppress
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 
 from async_rediscache import RedisCache
-from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
+from discord import Guild, HTTPException, PermissionOverwrite, TextChannel, Thread, VoiceChannel, app_commands
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord.utils import MISSING
@@ -14,6 +15,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_command
 from bot.utils.lock import LockedResourceError, lock, lock_arg
 
 log = get_logger(__name__)
@@ -98,6 +100,24 @@ async def _select_lock_channel(args: OrderedDict[str, any]) -> TextOrVoiceChanne
     return channel
 
 
+@asynccontextmanager
+async def _acknowledge_slash(ctx: Context) -> AsyncIterator[None]:
+    """
+    Acknowledge a slash command whose responses are all sent to the channel, and remove the acknowledgement after.
+
+    Nothing happens if the context isn't from a slash command, or if the interaction was already responded to.
+    The latter is the case when the command is invoked by a scheduled unsilence long after the original response.
+    """
+    if ctx.interaction is None or ctx.interaction.response.is_done():
+        yield
+        return
+
+    await ctx.defer(ephemeral=True)
+    yield
+    with suppress(HTTPException):
+        await ctx.interaction.delete_original_response()
+
+
 class Silence(commands.Cog):
     """Commands for stopping channel messages for `everyone` role in a channel."""
 
@@ -154,12 +174,18 @@ class Silence(commands.Cog):
             elif source_channel != target_channel:
                 await target_channel.send(message.format(channel="current channel"))
 
-    @commands.command(aliases=("hush",))
+    @hybrid_command(aliases=("hush",))
+    @app_commands.describe(
+        duration_or_channel="The channel to silence. Defaults to the current channel",
+        duration="Minutes to silence for, up to 15, or forever. Defaults to 10",
+        kick="Whether to kick members out of a voice channel and stop them rejoining",
+    )
+    @app_commands.rename(duration_or_channel="channel")
     @lock(LOCK_NAMESPACE, _select_lock_channel, raise_error=True)
     async def silence(
         self,
         ctx: Context,
-        duration_or_channel: TextOrVoiceChannel | HushDurationConverter = None,
+        duration_or_channel: TextOrVoiceChannel | None = None,
         duration: HushDurationConverter = 10,
         *,
         kick: bool = False
@@ -173,6 +199,18 @@ class Silence(commands.Cog):
         Passing a voice channel will attempt to move members out of the channel and back to force sync permissions.
         If `kick` is True, members will not be added back to the voice channel, and members will be unable to rejoin.
         """
+        async with _acknowledge_slash(ctx):
+            await self._silence(ctx, duration_or_channel, duration, kick=kick)
+
+    async def _silence(
+        self,
+        ctx: Context,
+        duration_or_channel: TextOrVoiceChannel | None,
+        duration: HushDurationConverter,
+        *,
+        kick: bool,
+    ) -> None:
+        """Silence the channel and send the result to the channel the command was invoked in."""
         channel, duration = self.parse_silence_args(ctx, duration_or_channel, duration)
 
         channel_info = f"#{channel} ({channel.id})"
@@ -269,7 +307,8 @@ class Silence(commands.Cog):
             unsilence_time = datetime.now(tz=UTC) + timedelta(minutes=duration)
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
-    @commands.command(aliases=("unhush",))
+    @hybrid_command(aliases=("unhush",))
+    @app_commands.describe(channel="The channel to unsilence. Defaults to the current channel")
     async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
         """
         Unsilence the given channel if given, else the current one.
@@ -279,7 +318,8 @@ class Silence(commands.Cog):
         if channel is None:
             channel = ctx.channel
         log.debug("Unsilencing channel #%s from %s's command.", channel, ctx.author)
-        await self._unsilence_wrapper(channel, ctx)
+        async with _acknowledge_slash(ctx):
+            await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
     async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Context | None = None) -> None:
