@@ -7,7 +7,16 @@ import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter, IDConverter, MemberConverter, UserConverter
+from discord.ext.commands import (
+    BadArgument,
+    BadUnionArgument,
+    CommandError,
+    Context,
+    Converter,
+    IDConverter,
+    MemberConverter,
+    UserConverter,
+)
 from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import unqualify
@@ -425,6 +434,49 @@ class Infraction(Converter):
             raise e
 
 
+MemberOrUser = discord.Member | discord.User
+
+
+class _UnionConverter(Converter):
+    """
+    Base for converters which try each of `converters` in order, using the first one that succeeds.
+
+    This behaves like a `Union` annotation of the converters for prefix commands, but as a single converter
+    class so that it can also be used in hybrid commands, where it is a string option for slash commands.
+    """
+
+    converters: tuple[type[Converter], ...]
+
+    async def convert(self, ctx: Context, argument: str) -> t.Any:
+        """Convert `argument` using the first of the converters which succeeds."""
+        errors = []
+        for converter in self.converters:
+            try:
+                return await converter().convert(ctx, argument)
+            except CommandError as exc:
+                errors.append(exc)
+
+        raise BadUnionArgument(ctx.current_parameter, self.converters, errors)
+
+
+class Expiry(_UnionConverter):
+    """Converts a duration string into a datetime in the future, or an ISO-8601 datetime string."""
+
+    converters = (Duration, ISODateTime)
+
+
+class DurationOrExpiry(_UnionConverter):
+    """Converts a duration string into a relativedelta, or an ISO-8601 datetime string into a datetime."""
+
+    converters = (DurationDelta, ISODateTime)
+
+
+class UnambiguousMemberOrUser(_UnionConverter):
+    """Converts a user mention or ID into a `discord.Member`, falling back to a `discord.User`."""
+
+    converters = (UnambiguousMember, UnambiguousUser)
+
+
 if t.TYPE_CHECKING:
     ValidFilterListType = str
     Extension = str
@@ -442,8 +494,6 @@ if t.TYPE_CHECKING:
     UnambiguousUser = discord.User
     UnambiguousMember = discord.Member
     Infraction = dict | None
-
-Expiry = Duration | ISODateTime
-DurationOrExpiry = DurationDelta | ISODateTime
-MemberOrUser = discord.Member | discord.User
-UnambiguousMemberOrUser = UnambiguousMember | UnambiguousUser
+    Expiry = datetime
+    DurationOrExpiry = relativedelta | datetime
+    UnambiguousMemberOrUser = discord.Member | discord.User
