@@ -1,18 +1,51 @@
 import textwrap
 from collections import ChainMap
 
-from discord import app_commands
+import discord
+from discord import Interaction, Member, User, app_commands
 from discord.ext.commands import Cog, Context, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Webhooks
+from bot.constants import Channels, Guild, MODERATION_ROLES, Webhooks
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction._utils import post_infraction
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.log import get_logger
+from bot.utils.context_menus import authorise_command, authorise_context, context_menu_error_handler
 from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
+
+REASON_MAX_LENGTH = 1000
+
+
+class WatchModal(discord.ui.Modal):
+    """A modal asking for the reason to watch or unwatch a user."""
+
+    reason = discord.ui.TextInput(label="Reason", style=discord.TextStyle.long, max_length=REASON_MAX_LENGTH)
+
+    def __init__(self, ctx: Context, user: Member | User, *, watching: bool):
+        super().__init__(title=f"{'Unwatch' if watching else 'Watch'} {user.display_name}"[:45])
+        self.ctx = ctx
+        self.user = user
+        self.command_name = "bigbrother unwatch" if watching else "bigbrother watch"
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        """Watch or unwatch the user through the same code as the command for it."""
+        ctx = self.ctx
+        # Respond to the modal submission rather than to the menu invocation.
+        ctx.interaction = interaction
+
+        # The menu was gated when it was invoked, but the roles of the invoker may have changed since.
+        await authorise_context(ctx, self.command_name)
+
+        # The work is only done after this, as the response to a modal must be sent within 3 seconds.
+        await ctx.defer()
+        await ctx.invoke(ctx.command, self.user, reason=self.reason.value.strip())
+
+    async def on_error(self, interaction: Interaction, error: Exception) -> None:
+        """Handle any exceptions in the processing of the modal."""
+        await context_menu_error_handler(interaction, error)
 
 
 class BigBrother(WatchChannel, Cog, name="Big Brother"):
@@ -27,6 +60,24 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             api_default_params={"active": "true", "type": "watch", "ordering": "-inserted_at", "limit": 10_000},
             logger=log
         )
+
+        self.watch_menu = app_commands.ContextMenu(name="Watch / Unwatch", callback=self._watch_menu_callback)
+        self.watch_menu.default_permissions = discord.Permissions.none()
+        self.watch_menu.error(context_menu_error_handler)
+
+    async def cog_load(self) -> None:
+        """Add the context menu to the command tree, and load the watched users."""
+        self.bot.tree.add_command(self.watch_menu, guild=discord.Object(Guild.id))
+        await super().cog_load()
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree, and stop relaying messages."""
+        self.bot.tree.remove_command(
+            self.watch_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.watch_menu.type,
+        )
+        await super().cog_unload()
 
     @hybrid_group(name="bigbrother", aliases=("bb",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
@@ -89,6 +140,14 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """Stop relaying messages by the given `user`."""
         await ctx.defer()
         await self.apply_unwatch(ctx, user, reason)
+
+    @app_commands.guild_only()
+    async def _watch_menu_callback(self, interaction: Interaction, user: Member | User) -> None:
+        """Ask for a reason to stop watching the user if they are watched, or to start watching them if not."""
+        watching = user.id in self.watched_users
+        # Gated in the same way as the `bigbrother watch` or `bigbrother unwatch` command.
+        ctx = await authorise_command(interaction, "bigbrother unwatch" if watching else "bigbrother watch")
+        await interaction.response.send_modal(WatchModal(ctx, user, watching=watching))
 
     async def apply_watch(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """
