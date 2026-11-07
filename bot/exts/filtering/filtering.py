@@ -14,16 +14,15 @@ import aiohttp
 import arrow
 import discord
 from async_rediscache import RedisCache
-from discord import Colour, Embed, HTTPException, Message, MessageType, Thread
-from discord.ext import commands, tasks
-from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
+from discord import Colour, Embed, HTTPException, Message, MessageType, Thread, app_commands
+from discord.ext import tasks
+from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
-from bot import constants
 from bot.bot import Bot
 from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
@@ -55,11 +54,13 @@ from bot.exts.filtering._ui.ui import (
     format_response_error,
 )
 from bot.exts.filtering._utils import past_tense, repr_equals, resolve_mention, starting_value, to_serializable
+from bot.exts.moderation.infraction._utils import defer_once
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
+from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
 
@@ -349,15 +350,17 @@ class Filtering(Cog):
     # endregion
     # region: blacklist commands
 
-    @commands.group(aliases=("bl", "blacklist", "denylist", "dl"))
+    @hybrid_group(aliases=("bl", "blacklist", "denylist", "dl"))
     async def blocklist(self, ctx: Context) -> None:
         """Group for managing blacklisted items."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
     @blocklist.command(name="list", aliases=("get",))
+    @app_commands.describe(list_name="The name of the filter list")
     async def bl_list(self, ctx: Context, list_name: str | None = None) -> None:
         """List the contents of a specified blacklist."""
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if not result:
             return
@@ -365,6 +368,12 @@ class Filtering(Cog):
         await self._send_list(ctx, filter_list, list_type)
 
     @blocklist.command(name="add", aliases=("a",))
+    @app_commands.describe(
+        noui="Use noui to add the filter directly, without showing the UI",
+        list_name="The name of the filter list",
+        content="The content of the filter",
+        description_and_settings="The description, followed by settings as setting_name=value",
+    )
     async def bl_add(
         self,
         ctx: Context,
@@ -383,6 +392,7 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
         """
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if result is None:
             return
@@ -392,15 +402,17 @@ class Filtering(Cog):
     # endregion
     # region: whitelist commands
 
-    @commands.group(aliases=("wl", "whitelist", "al"))
+    @hybrid_group(aliases=("wl", "whitelist", "al"))
     async def allowlist(self, ctx: Context) -> None:
         """Group for managing blacklisted items."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
     @allowlist.command(name="list", aliases=("get",))
+    @app_commands.describe(list_name="The name of the filter list")
     async def al_list(self, ctx: Context, list_name: str | None = None) -> None:
         """List the contents of a specified whitelist."""
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if not result:
             return
@@ -408,6 +420,12 @@ class Filtering(Cog):
         await self._send_list(ctx, filter_list, list_type)
 
     @allowlist.command(name="add", aliases=("a",))
+    @app_commands.describe(
+        noui="Use noui to add the filter directly, without showing the UI",
+        list_name="The name of the filter list",
+        content="The content of the filter",
+        description_and_settings="The description, followed by settings as setting_name=value",
+    )
     async def al_add(
         self,
         ctx: Context,
@@ -426,6 +444,7 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
         """
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if result is None:
             return
@@ -435,7 +454,8 @@ class Filtering(Cog):
     # endregion
     # region: filter commands
 
-    @commands.group(aliases=("filters", "f"), invoke_without_command=True)
+    @hybrid_group(aliases=("filters", "f"), invoke_without_command=True, fallback="get")
+    @app_commands.describe(id_="The ID of the filter to show")
     async def filter(self, ctx: Context, id_: int | None = None) -> None:
         """
         Group for managing filters.
@@ -446,6 +466,7 @@ class Filtering(Cog):
             await ctx.send_help(ctx.command)
             return
 
+        await defer_once(ctx)
         result = self._get_filter_by_id(id_)
         if result is None:
             await ctx.send(f":x: Could not find a filter with ID `{id_}`.")
@@ -466,11 +487,12 @@ class Filtering(Cog):
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
-            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
+            f"run `/filterlist describe {list_type.name} {filter_list.name}`."
         ))
         await ctx.send(embed=embed)
 
     @filter.command(name="list", aliases=("get",))
+    @app_commands.describe(list_type="The type of the filter list", list_name="The name of the filter list")
     async def f_list(
         self,
         ctx: Context,
@@ -478,6 +500,7 @@ class Filtering(Cog):
         list_name: str | None = None,
     ) -> None:
         """List the contents of a specified list of filters."""
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
         if result is None:
             return
@@ -486,6 +509,7 @@ class Filtering(Cog):
         await self._send_list(ctx, filter_list, list_type)
 
     @filter.command(name="describe", aliases=("explain", "manual"))
+    @app_commands.describe(filter_name="The name of the filter type")
     async def f_describe(self, ctx: Context, filter_name: str | None) -> None:
         """Show a description of the specified filter, or a list of possible values if no name is specified."""
         if not filter_name:
@@ -506,6 +530,13 @@ class Filtering(Cog):
             await ctx.send(embed=embed)
 
     @filter.command(name="add", aliases=("a",))
+    @app_commands.describe(
+        noui="Use noui to add the filter directly, without showing the UI",
+        list_type="The type of the filter list",
+        list_name="The name of the filter list",
+        content="The content of the filter",
+        description_and_settings="The description, followed by settings as setting_name=value",
+    )
     async def f_add(
         self,
         ctx: Context,
@@ -528,8 +559,9 @@ class Filtering(Cog):
         A template filter can be specified in the settings area to copy overrides from. The setting name is "--template"
         and the value is the filter ID. The template will be used before applying any other override.
 
-        Example: `!filter add denied token "Scaleios is great" remove_context=True send_alert=False --template=100`
+        Example: `/filter add denied token "Scaleios is great" remove_context=True send_alert=False --template=100`
         """
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
         if result is None:
             return
@@ -537,6 +569,11 @@ class Filtering(Cog):
         await self._add_filter(ctx, noui, list_type, filter_list, content, description_and_settings)
 
     @filter.command(name="edit", aliases=("e",))
+    @app_commands.describe(
+        noui="Use noui to edit the filter directly, without showing the UI",
+        filter_id="The ID of the filter to edit",
+        description_and_settings="The new description, followed by settings as setting_name=value",
+    )
     async def f_edit(
         self,
         ctx: Context,
@@ -559,6 +596,7 @@ class Filtering(Cog):
 
         To edit the filter's content, use the UI.
         """
+        await defer_once(ctx)
         result = self._get_filter_by_id(filter_id)
         if result is None:
             await ctx.send(f":x: Could not find a filter with ID `{filter_id}`.")
@@ -583,7 +621,14 @@ class Filtering(Cog):
         if noui:
             try:
                 await patch_func(
-                    ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+                    self._reply_target(ctx),
+                    filter_list,
+                    list_type,
+                    filter_type,
+                    content,
+                    description,
+                    settings,
+                    filter_settings,
                 )
             except ResponseCodeError as e:
                 await ctx.reply(embed=format_response_error(e))
@@ -598,7 +643,7 @@ class Filtering(Cog):
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
-            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
+            f"run `/filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
         view = filters_ui.FilterEditView(
@@ -615,11 +660,13 @@ class Filtering(Cog):
             embed,
             patch_func
         )
-        await ctx.send(embed=embed, reference=ctx.message, view=view)
+        await ctx.reply(embed=embed, view=view)
 
     @filter.command(name="delete", aliases=("d", "remove"))
+    @app_commands.describe(filter_id="The ID of the filter to delete")
     async def f_delete(self, ctx: Context, filter_id: int) -> None:
         """Delete the filter specified by its ID."""
+        await defer_once(ctx)
         async def delete_list() -> None:
             """The actual removal routine."""
             await bot.instance.api_client.delete(f"bot/filter/filters/{filter_id}")
@@ -638,6 +685,7 @@ class Filtering(Cog):
         )
 
     @filter.command(aliases=("settings",))
+    @app_commands.describe(setting_name="The name of the setting")
     async def setting(self, ctx: Context, setting_name: str | None) -> None:
         """Show a description of the specified setting, or a list of possible settings if no name is specified."""
         if not setting_name:
@@ -667,12 +715,21 @@ class Filtering(Cog):
             await ctx.send(embed=embed)
 
     @filter.command(name="imagehash", aliases=("hash",))
-    async def f_imagehash(self, ctx: Context) -> None:
+    @app_commands.describe(image="The image to hash")
+    async def f_imagehash(self, ctx: Context, image: discord.Attachment | None = None) -> None:
         """Hash an attached image and return its normalized hexadecimal perceptual hash."""
-        attachment = self._first_attached_image(ctx.message)
-        if attachment is None:
-            await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
-            return
+        await defer_once(ctx)
+        if ctx.interaction is not None:
+            # There is no invoking message to read attachments from, or a message which was replied to.
+            attachment = image if image and image.content_type and image.content_type.startswith("image") else None
+            if attachment is None:
+                await ctx.reply(":x: Provide an image.")
+                return
+        else:
+            attachment = self._first_attached_image(ctx.message)
+            if attachment is None:
+                await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
+                return
 
         if attachment.size > MAX_IMAGE_HASH_SIZE:
             await ctx.reply(":x: The image must be 5 MB or smaller.")
@@ -722,6 +779,11 @@ class Filtering(Cog):
         await ctx.reply(embed=embed)
 
     @filter.command(name="match")
+    @app_commands.describe(
+        no_user="Whether to check the message regardless of its author",
+        message="A message link or ID, whose filter matches to list",
+        string="Some text to check for filter matches. Ignored if a message is given",
+    )
     async def f_match(
         self, ctx: Context, no_user: bool | None, message: Message | None, *, string: str | None
     ) -> None:
@@ -736,6 +798,7 @@ class Filtering(Cog):
         """
         if not message and not string:
             raise BadArgument("Please provide input.")
+        await defer_once(ctx)
         if message:
             user = None if no_user else message.author
             filter_ctx = FilterContext(Event.MESSAGE, user, message.channel, message.content, message, message.embeds)
@@ -754,7 +817,12 @@ class Filtering(Cog):
         embed = Embed(colour=Colour.blue(), title="Match results")
         await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
 
-    @filter.command(name="search")
+    @filter.command(name="search", description="Find filters with the provided settings.")
+    @app_commands.describe(
+        noui="Use noui to search directly, without showing the UI",
+        filter_type_name="The type of filter to search for",
+        settings="Settings to search by, as setting_name=value",
+    )
     async def f_search(
         self,
         ctx: Context,
@@ -769,6 +837,7 @@ class Filtering(Cog):
         If a list type and/or a list name are provided, the search will be limited to those parameters. A list name must
         be provided in order to search by filter-specific settings.
         """
+        await defer_once(ctx)
         filter_type = None
         if filter_type_name:
             filter_type_name = filter_type_name.lower()
@@ -793,7 +862,7 @@ class Filtering(Cog):
         )
 
         if noui:
-            await self._search_filters(ctx.message, filter_type, settings, filter_settings)
+            await self._search_filters(self._reply_target(ctx), filter_type, settings, filter_settings)
             return
 
         embed = Embed(colour=Colour.blue())
@@ -809,13 +878,19 @@ class Filtering(Cog):
             embed,
             self._search_filters
         )
-        await ctx.send(embed=embed, reference=ctx.message, view=view)
+        await ctx.reply(embed=embed, view=view)
 
     @filter.command(root_aliases=("compfilter", "compf"))
+    @app_commands.describe(
+        list_name="The name of the filter list",
+        content="The content of the filter",
+        description="The description of the filter",
+    )
     async def compadd(
         self, ctx: Context, list_name: str | None, content: str, *, description: str | None = "Phishing"
     ) -> None:
         """Add a filter to detect a compromised account. Will apply the equivalent of a compban if triggered."""
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if result is None:
             return
@@ -836,17 +911,23 @@ class Filtering(Cog):
     # endregion
     # region: filterlist group
 
-    @commands.group(aliases=("fl",))
+    @hybrid_group(aliases=("fl",))
     async def filterlist(self, ctx: Context) -> None:
         """Group for managing filter lists."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
+    @filterlist.command(
+        name="describe",
+        aliases=("explain", "manual", "id"),
+        description="Show a description of the specified filter list, or the possible values if none is given.",
+    )
+    @app_commands.describe(list_type="The type of the filter list", list_name="The name of the filter list")
     async def fl_describe(
         self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
+        await defer_once(ctx)
         if not list_type and not list_name:
             list_names = [f"» {fl}" for fl in self.filter_lists]
             embed = Embed(colour=Colour.blue())
@@ -875,8 +956,10 @@ class Filtering(Cog):
 
     @filterlist.command(name="add", aliases=("a",))
     @has_any_role(Roles.admins)
+    @app_commands.describe(list_type="The type of the new filter list", list_name="The name of the new filter list")
     async def fl_add(self, ctx: Context, list_type: ListTypeConverter, list_name: str) -> None:
         """Add a new filter list."""
+        await defer_once(ctx)
         # Check if there's an implementation.
         if list_name.lower() not in filter_list_types:
             if list_name.lower()[:-1] not in filter_list_types:  # Maybe the name was given with uppercase or in plural?
@@ -905,10 +988,16 @@ class Filtering(Cog):
             embed,
             self._post_filter_list
         )
-        await ctx.send(embed=embed, reference=ctx.message, view=view)
+        await ctx.reply(embed=embed, view=view)
 
     @filterlist.command(name="edit", aliases=("e",))
     @has_any_role(Roles.admins)
+    @app_commands.describe(
+        noui="Use noui to edit the filter list directly, without showing the UI",
+        list_type="The type of the filter list",
+        list_name="The name of the filter list",
+        settings="The settings to change, as setting_name=value",
+    )
     async def fl_edit(
         self,
         ctx: Context,
@@ -926,6 +1015,7 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
         """
+        await defer_once(ctx)
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
         if result is None:
             return
@@ -933,7 +1023,7 @@ class Filtering(Cog):
         settings = settings_converter(self.loaded_settings, settings)
         if noui:
             try:
-                await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
+                await self._patch_filter_list(self._reply_target(ctx), filter_list, list_type, settings)
             except ResponseCodeError as e:
                 await ctx.reply(embed=format_response_error(e))
             return
@@ -951,14 +1041,16 @@ class Filtering(Cog):
             embed,
             self._patch_filter_list
         )
-        await ctx.send(embed=embed, reference=ctx.message, view=view)
+        await ctx.reply(embed=embed, view=view)
 
     @filterlist.command(name="delete", aliases=("remove",))
     @has_any_role(Roles.admins)
+    @app_commands.describe(list_type="The type of the filter list", list_name="The name of the filter list")
     async def fl_delete(
         self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Remove the filter list and all of its filters from the database."""
+        await defer_once(ctx)
         async def delete_list() -> None:
             """The actual removal routine."""
             list_data = await bot.instance.api_client.get(f"bot/filter/filter_lists/{list_id}")
@@ -988,9 +1080,19 @@ class Filtering(Cog):
     # endregion
     # region: utility commands
 
-    @command(name="filter_report")
+    @hybrid_command(name="filter_report")
     async def force_send_weekly_report(self, ctx: Context) -> None:
         """Respond with a list of auto-infractions added in the last 7 days."""
+        if ctx.interaction is not None:
+            # The report is posted to the channel, so only the invoker sees the response to the command.
+            await ctx.defer(ephemeral=True)
+            if not is_mod_channel(ctx.channel):
+                await ctx.send(":x: The report can only be sent in a mod channel.", ephemeral=True)
+                return
+            await self.send_weekly_auto_infraction_report(ctx.channel)
+            await ctx.send(":white_check_mark: Sent the report.", ephemeral=True)
+            return
+
         await self.send_weekly_auto_infraction_report(ctx.channel)
 
     # endregion
@@ -1153,6 +1255,11 @@ class Filtering(Cog):
             list_type = list(filter_list)[0]
         return list_type, filter_list
 
+    @staticmethod
+    def _reply_target(ctx: Context) -> Message | Context:
+        """Return what to reply to for `ctx`: its message, or the context itself for slash commands, which have none."""
+        return ctx if ctx.interaction is not None else ctx.message
+
     def _get_list_by_name(self, list_name: str) -> FilterList:
         """Get a filter list by its name, or raise an error if there's no such list."""
         log.trace(f"Getting the filter list matching the name {list_name}")
@@ -1255,7 +1362,14 @@ class Filtering(Cog):
         if noui:  # Add directly with no UI.
             try:
                 await self._post_new_filter(
-                    ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+                    self._reply_target(ctx),
+                    filter_list,
+                    list_type,
+                    filter_type,
+                    content,
+                    description,
+                    settings,
+                    filter_settings,
                 )
             except ResponseCodeError as e:
                 await ctx.reply(embed=format_response_error(e))
@@ -1272,7 +1386,7 @@ class Filtering(Cog):
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
-            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
+            f"run `/filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
         view = filters_ui.FilterEditView(
@@ -1289,7 +1403,7 @@ class Filtering(Cog):
             embed,
             self._post_new_filter
         )
-        await ctx.send(embed=embed, reference=ctx.message, view=view)
+        await ctx.reply(embed=embed, view=view)
 
     @staticmethod
     def _identical_filters_message(content: str, filter_list: FilterList, list_type: ListType, filter_: Filter) -> str:
@@ -1332,7 +1446,7 @@ class Filtering(Cog):
 
     async def _post_new_filter(
         self,
-        msg: Message,
+        msg: Message | Context,
         filter_list: FilterList,
         list_type: ListType,
         filter_type: type[Filter],
@@ -1367,7 +1481,7 @@ class Filtering(Cog):
     async def _patch_filter(
         self,
         filter_: Filter,
-        msg: Message,
+        msg: Message | Context,
         filter_list: FilterList,
         list_type: ListType,
         filter_type: type[Filter],
@@ -1413,7 +1527,9 @@ class Filtering(Cog):
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
 
-    async def _post_filter_list(self, msg: Message, list_name: str, list_type: ListType, settings: dict) -> None:
+    async def _post_filter_list(
+        self, msg: Message | Context, list_name: str, list_type: ListType, settings: dict
+    ) -> None:
         """POST the new data of the filter list to the site API."""
         payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
         filterlist_name = f"{past_tense(list_type.name.lower())} {list_name}"
@@ -1423,7 +1539,9 @@ class Filtering(Cog):
         await msg.reply(f"✅ Added a new filter list: {filterlist_name}")
 
     @staticmethod
-    async def _patch_filter_list(msg: Message, filter_list: FilterList, list_type: ListType, settings: dict) -> None:
+    async def _patch_filter_list(
+        msg: Message | Context, filter_list: FilterList, list_type: ListType, settings: dict
+    ) -> None:
         """PATCH the new data of the filter list to the site API."""
         list_id = filter_list[list_type].id
         response = await bot.instance.api_client.patch(
@@ -1478,7 +1596,7 @@ class Filtering(Cog):
         return result_filters
 
     async def _search_filters(
-        self, message: Message, filter_type: type[Filter] | None, settings: dict, filter_settings: dict
+        self, message: Message | Context, filter_type: type[Filter] | None, settings: dict, filter_settings: dict
     ) -> None:
         """Find all filters which match the settings and display them."""
         lines = []
@@ -1496,7 +1614,7 @@ class Filtering(Cog):
 
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"Search Results ({result_count} total)")
-        ctx = await bot.instance.get_context(message)
+        ctx = message if isinstance(message, Context) else await bot.instance.get_context(message)
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
     async def _delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
