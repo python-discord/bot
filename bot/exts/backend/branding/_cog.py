@@ -10,6 +10,7 @@ from operator import attrgetter
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
+from discord import app_commands
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
@@ -650,7 +651,7 @@ class Branding(commands.Cog):
     # region: Command interface (branding daemon)
 
     # Slash commands can only be nested one level deep, so the `daemon` subcommands are prefix only.
-    # They are available as the flat `daemon-enable`, `daemon-disable` and `daemon-status` slash commands below.
+    # They are available as the flat `daemon-set` and `daemon-status` slash commands below.
     @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.group(name="daemon", aliases=("d",), with_app_command=False)
     async def branding_daemon_group(self, ctx: commands.Context) -> None:
@@ -688,23 +689,21 @@ class Branding(commands.Cog):
     async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
         """Check whether the daemon is currently enabled."""
         if self.daemon_loop.is_running():
-            resp = make_embed("Daemon is enabled", "Use `/branding daemon-disable` to stop.", success=True)
+            resp = make_embed("Daemon is enabled", "Use `/branding daemon-set` to stop.", success=True)
         else:
-            resp = make_embed("Daemon is disabled", "Use `/branding daemon-enable` to start.", success=False)
+            resp = make_embed("Daemon is disabled", "Use `/branding daemon-set` to start.", success=False)
 
         await ctx.send(embed=resp)
 
     @commands.has_any_role(*MODERATION_ROLES)
-    @branding_group.command(name="daemon-enable")
-    async def branding_daemon_enable_slash(self, ctx: commands.Context) -> None:
-        """Enable the branding daemon."""
-        await self.branding_daemon_enable_cmd(ctx)
-
-    @commands.has_any_role(*MODERATION_ROLES)
-    @branding_group.command(name="daemon-disable")
-    async def branding_daemon_disable_slash(self, ctx: commands.Context) -> None:
-        """Disable the branding daemon."""
-        await self.branding_daemon_disable_cmd(ctx)
+    @branding_group.command(name="daemon-set")
+    @app_commands.describe(enabled="Whether the branding daemon should be enabled")
+    async def branding_daemon_set_slash(self, ctx: commands.Context, enabled: bool) -> None:
+        """Enable or disable the branding daemon."""
+        if enabled:
+            await self.branding_daemon_enable_cmd(ctx)
+        else:
+            await self.branding_daemon_disable_cmd(ctx)
 
     @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.command(name="daemon-status")

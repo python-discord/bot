@@ -206,7 +206,7 @@ class Defcon(Cog):
         if ctx.interaction:
             await ctx.send("DEFCON threshold updated.", ephemeral=True)
 
-    @defcon_group.command()
+    @defcon_group.command(with_app_command=False)
     @has_any_role(Roles.admins)
     async def shutdown(self, ctx: Context) -> None:
         """Shut down the server by setting send permissions of everyone to False."""
@@ -223,7 +223,7 @@ class Defcon(Cog):
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
-    @defcon_group.command()
+    @defcon_group.command(with_app_command=False)
     @has_any_role(Roles.admins)
     async def unshutdown(self, ctx: Context) -> None:
         """Open up the server again by setting send permissions of everyone to None."""
@@ -239,6 +239,16 @@ class Defcon(Cog):
         )
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
+
+    @defcon_group.command(name="shutdown-set")
+    @app_commands.describe(enabled="Whether the server should be shut down (True) or reopened (False)")
+    @has_any_role(Roles.admins)
+    async def shutdown_set(self, ctx: Context, enabled: bool) -> None:
+        """Shut down the server, or open it up again."""
+        if enabled:
+            await self.shutdown(ctx)
+        else:
+            await self.unshutdown(ctx)
 
     async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""

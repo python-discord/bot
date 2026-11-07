@@ -147,7 +147,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send_help(ctx.command)
 
     # Slash commands can only be nested one level deep, so the `autoreview` subcommands are prefix only.
-    # They are available as the flat `autoreview-enable`, `autoreview-disable` and `autoreview-status` slash commands.
+    # They are available as the flat `autoreview-set` and `autoreview-status` slash commands.
     @nomination_group.group(
         name="autoreview", aliases=("ar",), invoke_without_command=True, with_app_command=False
     )
@@ -205,23 +205,18 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send("Autoreview is currently disabled.")
 
-    @nomination_group.command(name="autoreview-enable")
+    @nomination_group.command(name="autoreview-set")
+    @app_commands.describe(enabled="Whether automatic posting of reviews should be enabled")
     @has_any_role(*STAFF_ROLES)
     @has_any_role(*MODERATION_ROLES, Roles.founders)
     @has_any_role(Roles.admins, Roles.founders)
     @commands.max_concurrency(1)
-    async def autoreview_enable_slash(self, ctx: Context) -> None:
-        """Enable automatic posting of reviews."""
-        await self.autoreview_enable(ctx)
-
-    @nomination_group.command(name="autoreview-disable")
-    @has_any_role(*STAFF_ROLES)
-    @has_any_role(*MODERATION_ROLES, Roles.founders)
-    @has_any_role(Roles.admins, Roles.founders)
-    @commands.max_concurrency(1)
-    async def autoreview_disable_slash(self, ctx: Context) -> None:
-        """Disable automatic posting of reviews."""
-        await self.autoreview_disable(ctx)
+    async def autoreview_set_slash(self, ctx: Context, enabled: bool) -> None:
+        """Enable or disable automatic posting of reviews."""
+        if enabled:
+            await self.autoreview_enable(ctx)
+        else:
+            await self.autoreview_disable(ctx)
 
     @nomination_group.command(name="autoreview-status")
     @has_any_role(*STAFF_ROLES)
