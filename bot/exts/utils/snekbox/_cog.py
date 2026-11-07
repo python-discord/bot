@@ -5,7 +5,19 @@ from operator import attrgetter
 from textwrap import dedent
 from typing import NamedTuple, TYPE_CHECKING, get_args
 
-from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
+from discord import (
+    AllowedMentions,
+    HTTPException,
+    Interaction,
+    Message,
+    MessageType,
+    NotFound,
+    Reaction,
+    User,
+    app_commands,
+    enums,
+    ui,
+)
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 from pydis_core.utils import interactions, paste_service
 from pydis_core.utils.paste_service import PasteFile, send_to_paste_service
@@ -32,6 +44,7 @@ from bot.exts.utils.snekbox._constants import (
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_command
 from bot.utils.lock import LockedResourceError, lock_arg
 
 if TYPE_CHECKING:
@@ -433,7 +446,10 @@ class Snekbox(Cog):
             allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
             view = self.build_python_version_switcher_view(job.version, ctx, job)
 
-            if ctx.message.channel == ctx.channel:
+            if ctx.interaction is not None:
+                # Respond to the slash command, there is no invocation message to reply to.
+                response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
+            elif ctx.message.channel == ctx.channel:
                 # Don't fail if the command invoking message was deleted.
                 message = ctx.message.to_reference(fail_if_not_exists=False)
                 response = await ctx.send(
@@ -461,6 +477,10 @@ class Snekbox(Cog):
         If the code is to be re-evaluated, return the new EvalJob.
         Otherwise, return None if the job's session should be terminated.
         """
+        if is_slash_invocation(ctx):
+            # There is no message to edit or react to, so the code cannot be re-evaluated.
+            return None
+
         _predicate_message_edit = partial(predicate_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_emoji_reaction, ctx)
 
@@ -608,7 +628,7 @@ class Snekbox(Cog):
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
-    @command(
+    @hybrid_command(
         name="timeit",
         aliases=("ti",),
         usage="[python_version] [setup_code] <code, ...>",
@@ -627,6 +647,10 @@ class Snekbox(Cog):
             We've done our best to make this sandboxed, but do let us know if you manage to find an
             issue with it!
         """
+    )
+    @app_commands.describe(
+        python_version="The Python version to run the code with",
+        code="The code to time. With several code blocks, the first is untimed setup code",
     )
     @guild_only()
     @redirect_output(
@@ -650,6 +674,11 @@ class Snekbox(Cog):
         job = EvalJob(args, version=python_version, name="timeit")
 
         await self.run_job(ctx, job)
+
+
+def is_slash_invocation(ctx: Context) -> bool:
+    """Return whether the context is from a slash command, including one detached from its interaction."""
+    return ctx.message.type is MessageType.chat_input_command
 
 
 def predicate_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
