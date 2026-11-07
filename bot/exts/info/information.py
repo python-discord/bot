@@ -7,8 +7,8 @@ from textwrap import shorten
 from typing import Any, TYPE_CHECKING
 
 import rapidfuzz
-from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, command, group, has_any_role
+from discord import AllowedMentions, Colour, Embed, Guild, Message, Role, app_commands
+from discord.ext.commands import BucketType, Cog, Context, Greedy, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
@@ -26,6 +26,7 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.messages import send_denial
 
 log = get_logger(__name__)
@@ -118,7 +119,7 @@ class Information(Cog):
         """)
 
     @has_any_role(*constants.STAFF_AND_COMMUNITY_ROLES)
-    @command(name="roles")
+    @hybrid_command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
         # Sort the roles alphabetically and remove the @everyone role
@@ -138,8 +139,9 @@ class Information(Cog):
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
     @has_any_role(*constants.STAFF_AND_COMMUNITY_ROLES)
-    @command(name="role")
-    async def role_info(self, ctx: Context, *roles: Role | str) -> None:
+    @hybrid_command(name="role")
+    @app_commands.describe(roles="The roles to get information on, separated by spaces. Quote names with spaces")
+    async def role_info(self, ctx: Context, roles: Greedy[Role | str]) -> None:
         """
         Return information on a role or list of roles.
 
@@ -187,9 +189,10 @@ class Information(Cog):
 
             await ctx.send(embed=embed)
 
-    @command(name="server", aliases=["server_info", "guild", "guild_info"])
+    @hybrid_command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
+        await ctx.defer()
         embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
         created = time.format_relative(ctx.guild.created_at)
@@ -241,13 +244,16 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user_or_message: MemberOrUser | Message = None) -> None:
+    @hybrid_command(name="user", aliases=["user_info", "member", "member_info", "u"])
+    @app_commands.describe(
+        user="The user to get information on, defaults to you",
+        message="A link to a message to get information on its author instead",
+    )
+    async def user_info(self, ctx: Context, user: MemberOrUser | None = None, message: Message | None = None) -> None:
         """Returns info about a user."""
-        if passed_as_message := isinstance(user_or_message, Message):
-            user = user_or_message.author
-        else:
-            user = user_or_message
+        await ctx.defer()
+        if passed_as_message := message is not None:
+            user = message.author
 
         if user is None:
             user = ctx.author
@@ -563,7 +569,8 @@ class Information(Cog):
         await ctx.send(message)
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_AND_COMMUNITY_ROLES)
-    @group(invoke_without_command=True)
+    @hybrid_group(invoke_without_command=True, fallback="message")
+    @app_commands.describe(message="A link to the message, or reply to a message when using the command by mention")
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_AND_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response."""
@@ -578,7 +585,11 @@ class Information(Cog):
 
         await self.send_raw_content(ctx, message)
 
+    # The checks of the group do not apply to the slash command of a subcommand, so they are repeated here.
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_AND_COMMUNITY_ROLES)
     @raw.command()
+    @app_commands.describe(message="A link to the message, or reply to a message when using the command by mention")
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_AND_COMMUNITY_ROLES)
     async def json(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         if message is None:
@@ -634,14 +645,16 @@ class Information(Cog):
 
         await rules_thread.send(embed=warning_embed)
 
-    @command(aliases=("rule",))
-    async def rules(self, ctx: Context, *, args: str | None) -> set[int] | None:
+    @hybrid_command(aliases=("rule",))
+    @app_commands.describe(args="Rule numbers or keywords, in any order. Leave empty for a link to all rules")
+    async def rules(self, ctx: Context, *, args: str | None = None) -> set[int] | None:
         """
         Provides a link to all rules or, if specified, displays specific rule(s).
 
         It accepts either rule numbers or particular keywords that map to a particular rule.
         Rule numbers and keywords can be sent in any order.
         """
+        await ctx.defer()
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
 

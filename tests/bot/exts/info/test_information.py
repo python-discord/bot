@@ -72,7 +72,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role))
+        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, [dummy_role, admin_role]))
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -517,6 +517,15 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext(author=self.author)
 
         await self.cog.user_info(self.cog, ctx, self.target)
+
+        ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
+
+    async def test_message_argument_targets_its_author(self, constants):
+        """A regular user should not be able to use the command on the author of a message other than themselves."""
+        constants.MODERATION_ROLES = [self.moderator_role.id]
+        ctx = helpers.MockContext(author=self.author)
+
+        await self.cog.user_info(self.cog, ctx, message=helpers.MockMessage(author=self.target))
 
         ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
 
