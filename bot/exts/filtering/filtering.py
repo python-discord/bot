@@ -14,7 +14,7 @@ import aiohttp
 import arrow
 import discord
 from async_rediscache import RedisCache
-from discord import Colour, Embed, HTTPException, Message, MessageType, Thread, app_commands
+from discord import Colour, Embed, HTTPException, Interaction, Message, MessageType, Thread, app_commands
 from discord.ext import tasks
 from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from pydis_core.site_api import ResponseCodeError
@@ -60,6 +60,7 @@ from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
@@ -73,6 +74,8 @@ HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 MAX_IMAGE_HASH_SIZE = 5_000_000
+# The most characters of the results of the `Filter match` context menu, which is limited by the embed description.
+MATCH_MENU_MAX_LENGTH = 3900
 
 
 def _clean_ban_mentions(mentions: set[str]) -> set[str]:
@@ -123,12 +126,30 @@ class Filtering(Cog):
 
         self.message_cache = MessageCache(CACHE_SIZE, newest_first=True)
 
+        self.filter_match_menu = app_commands.ContextMenu(
+            name="Filter match", callback=self._filter_match_menu_callback
+        )
+        self.filter_imagehash_menu = app_commands.ContextMenu(
+            name="Filter imagehash", callback=self._filter_imagehash_menu_callback
+        )
+        for menu in self.context_menus:
+            menu.default_permissions = discord.Permissions.none()
+            menu.error(context_menu_error_handler)
+
+    @property
+    def context_menus(self) -> tuple[app_commands.ContextMenu, ...]:
+        """The context menus of this cog."""
+        return self.filter_match_menu, self.filter_imagehash_menu
+
     async def cog_load(self) -> None:
         """
         Fetch the filter data from the API, parse it, and load it to the appropriate data structures.
 
         Additionally, fetch the alerting webhook.
         """
+        for menu in self.context_menus:
+            self.bot.tree.add_command(menu, guild=discord.Object(Guild.id))
+
         await self.bot.wait_until_guild_available()
 
         log.trace("Loading filtering information from the database.")
@@ -731,12 +752,16 @@ class Filtering(Cog):
                 await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
                 return
 
-        if attachment.size > MAX_IMAGE_HASH_SIZE:
+        await self._reply_with_image_hash(ctx, attachment.url, attachment.size)
+
+    async def _reply_with_image_hash(self, ctx: Context, url: str, size: int | None) -> None:
+        """Hash the image at `url`, of `size` bytes if known, and reply with its hash and the closest known filter."""
+        if size is not None and size > MAX_IMAGE_HASH_SIZE:
             await ctx.reply(":x: The image must be 5 MB or smaller.")
             return
 
         try:
-            image_hash = await get_image_hash(attachment.url)
+            image_hash = await get_image_hash(url)
         except aiohttp.ClientError:
             log.exception("Unhandled aiohttp exception while getting image hash")
             await ctx.reply(":x: Failed to reach the image hashing service.")
@@ -806,16 +831,58 @@ class Filtering(Cog):
             python_general = ctx.guild.get_channel(Channels.python_general)
             filter_ctx = FilterContext(Event.MESSAGE, None, python_general, string, None)
 
+        lines = await self._get_match_lines(filter_ctx)
+
+        embed = Embed(colour=Colour.blue(), title="Match results")
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
+
+    async def _get_match_lines(self, filter_ctx: FilterContext) -> list[str]:
+        """Return the lines listing the filters triggered by `filter_ctx`."""
         _, _, triggers = await self._resolve_action(filter_ctx)
         lines = []
         for sublist, sublist_triggers in triggers.items():
             if sublist_triggers:
                 triggers_repr = map(str, sublist_triggers)
                 lines.extend([f"**{sublist.label.title()}s**", *triggers_repr, "\n"])
-        lines = lines[:-1]  # Remove last newline.
+        return lines[:-1]  # Remove last newline.
 
-        embed = Embed(colour=Colour.blue(), title="Match results")
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
+    @app_commands.guild_only()
+    async def _filter_match_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """List the filters triggered by the message, as `filter match` does."""
+        # Gated in the same way as the `filter match` command.
+        ctx = await authorise_command(interaction, "filter match")
+        # The command paginates with reactions, which can't be added to an ephemeral message.
+        await ctx.defer(ephemeral=True)
+
+        filter_ctx = FilterContext(
+            Event.MESSAGE, message.author, message.channel, message.content, message, message.embeds
+        )
+        lines = await self._get_match_lines(filter_ctx)
+
+        description = "\n".join(lines) or "No filters were triggered."
+        if len(description) > MATCH_MENU_MAX_LENGTH:
+            description = description[:MATCH_MENU_MAX_LENGTH] + "\n... (truncated, use `/filter match` for all)"
+        await ctx.send(embed=Embed(colour=Colour.blue(), title="Match results", description=description))
+
+    @app_commands.guild_only()
+    async def _filter_imagehash_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """Hash the first image of the message, as `filter imagehash` does."""
+        # Gated in the same way as the `filter imagehash` command.
+        ctx = await authorise_command(interaction, "filter imagehash")
+        await ctx.defer(ephemeral=True)
+
+        attachment = next(
+            (a for a in message.attachments if a.content_type and a.content_type.startswith("image")), None
+        )
+        if attachment is not None:
+            url, size = attachment.url, attachment.size
+        elif (url := self._first_embed_image_url(message)) is not None:
+            size = None
+        else:
+            await ctx.send(":x: That message has no image.")
+            return
+
+        await self._reply_with_image_hash(ctx, url, size)
 
     @filter.command(name="search", description="Find filters with the provided settings.")
     @app_commands.describe(
@@ -1296,6 +1363,16 @@ class Filtering(Cog):
         return None
 
     @staticmethod
+    def _first_embed_image_url(message: Message) -> str | None:
+        """Return the URL of the first image in the embeds of the message, such as a linked image."""
+        for embed in message.embeds:
+            if embed.image:
+                return embed.image.url
+            if embed.type == "image" and embed.thumbnail:
+                return embed.thumbnail.url
+        return None
+
+    @staticmethod
     def _first_attached_image(message: Message) -> discord.Attachment | None:
         """Return the first image attachment from the invoking or replied-to message."""
         attachments = list(message.attachments)
@@ -1747,6 +1824,8 @@ class Filtering(Cog):
         """Cancel the weekly auto-infraction filter report and deletion scheduling on cog unload."""
         self.weekly_auto_infraction_report_task.cancel()
         self.delete_scheduler.cancel_all()
+        for menu in self.context_menus:
+            self.bot.tree.remove_command(menu.name, guild=discord.Object(Guild.id), type=menu.type)
 
 
 async def setup(bot: Bot) -> None:
