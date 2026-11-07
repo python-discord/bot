@@ -6,7 +6,15 @@ from unittest.mock import MagicMock, patch
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, BadUnionArgument
 
-from bot.converters import Duration, DurationOrExpiry, Expiry, HushDurationConverter, ISODateTime, PackageName
+from bot.converters import (
+    Duration,
+    DurationOrExpiry,
+    Expiry,
+    HushDurationConverter,
+    ISODateTime,
+    NomineeOrNominationID,
+    PackageName,
+)
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -275,3 +283,14 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             await Expiry().convert(context, "not a time")
 
         self.assertEqual(2, len(cm.exception.errors))
+
+    async def test_nominee_or_nomination_id_converts_small_numbers_to_int(self):
+        """NomineeOrNominationID falls back to an int when the argument is not a user mention or ID."""
+        self.assertEqual(42, await NomineeOrNominationID().convert(self.context, "42"))
+
+    async def test_nominee_or_nomination_id_rejects_other_arguments(self):
+        """NomineeOrNominationID raises BadUnionArgument when the argument is neither a user nor an integer."""
+        with self.assertRaises(BadUnionArgument) as cm:
+            await NomineeOrNominationID().convert(MagicMock(), "not a user")
+
+        self.assertEqual(3, len(cm.exception.errors))

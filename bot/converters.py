@@ -484,6 +484,23 @@ class MemberOrUserOrObject(UnionConverter):
     converters = (MemberConverter, UserConverter, ObjectConverter)
 
 
+class _Integer(Converter):
+    """Converts a string of digits to an `int`."""
+
+    async def convert(self, ctx: Context, argument: str) -> int:
+        """Convert the `argument` to an `int`."""
+        try:
+            return int(argument)
+        except ValueError:
+            raise BadArgument(f"`{argument}` is not a valid integer.")
+
+
+class NomineeOrNominationID(UnionConverter):
+    """Converts a user mention or ID into a `discord.Member` or `discord.User`, or else a number into an `int`."""
+
+    converters = (UnambiguousMember, UnambiguousUser, _Integer)
+
+
 if t.TYPE_CHECKING:
     ValidFilterListType = str
     Extension = str
@@ -505,3 +522,4 @@ if t.TYPE_CHECKING:
     DurationOrExpiry = relativedelta | datetime
     UnambiguousMemberOrUser = discord.Member | discord.User
     MemberOrUserOrObject = discord.Member | discord.User | discord.Object
+    NomineeOrNominationID = discord.Member | discord.User | int
