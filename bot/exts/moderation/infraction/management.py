@@ -291,7 +291,7 @@ class ModManagement(commands.Cog):
             """.rstrip()
 
         changes = " & ".join(confirm_messages)
-        confirmation = await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
+        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
 
         if user:
             user_text = messages.format_user(user)
@@ -306,8 +306,9 @@ class ModManagement(commands.Cog):
         ):
             jump_url = "(Infraction edited in a ModMail channel.)"
         else:
-            # For slash commands the invocation message is not a real message, so link to the response instead.
-            jump_url = f"[Click here.]({(confirmation if ctx.interaction else ctx.message).jump_url})"
+            # `ctx.send` may be replaced with a no-op (e.g. by cleanban), so don't use the confirmation message.
+            invocation_url = await _utils.get_invocation_jump_url(ctx)
+            jump_url = f"[Click here.]({invocation_url})" if invocation_url else "(Invocation message not found.)"
 
         await send_log_message(
             self.bot,
