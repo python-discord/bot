@@ -706,10 +706,10 @@ def make_menu_interaction(
     member = MockMember(roles=[MockRole(id=role_id) for role_id in role_ids])
     channel = MockTextChannel(id=channel_id)
     message = MockMessage(author=member, channel=channel, created_at=datetime.now(UTC))
-    ctx = MockContext(author=member, channel=channel, message=message)
+    interaction = MockInteraction(user=member, channel=channel)
+    ctx = MockContext(author=member, channel=channel, message=message, bot=interaction.client)
     ctx.bot._before_invoke = None
 
-    interaction = MockInteraction(user=member, channel=channel)
     interaction.client.get_command = unittest.mock.MagicMock(return_value=command)
     interaction.client.get_context = unittest.mock.AsyncMock(return_value=ctx)
     return interaction, ctx

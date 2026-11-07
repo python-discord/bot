@@ -35,13 +35,23 @@ async def authorise_command(interaction: discord.Interaction, command_name: str)
     Returns a context for the interaction, with its command set to `command_name`, which can be used to run the
     logic of the command. Raises `ContextMenuDenied` if the invoker is not allowed to use the command.
     """
-    bot = interaction.client
-    command = bot.get_command(command_name)
+    # For a context menu the author of this context is the user who invoked the menu.
+    ctx = await interaction.client.get_context(interaction)
+    await authorise_context(ctx, command_name)
+    return ctx
+
+
+async def authorise_context(ctx: Context, command_name: str) -> None:
+    """
+    Gate `ctx` on the text command `command_name`, as `authorise_command` does, and set it as the command of `ctx`.
+
+    This is for menus which need to gate on more than one command, or when the interaction which started the
+    context has been replaced by a later one, such as that of a modal.
+    """
+    command = ctx.bot.get_command(command_name)
     if command is None:
         raise RuntimeError(f"Command {command_name!r} does not exist, so a menu can't be gated on it.")
 
-    # For a context menu the author of this context is the user who invoked the menu.
-    ctx = await bot.get_context(interaction)
     ctx.command = command
     ctx.invoked_with = command.name
 
@@ -61,7 +71,6 @@ async def authorise_command(interaction: discord.Interaction, command_name: str)
         raise ContextMenuDenied from e
 
     ctx.command = command
-    return ctx
 
 
 async def _respond(interaction: discord.Interaction, content: str) -> None:

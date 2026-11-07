@@ -5,7 +5,7 @@ from datetime import UTC, timedelta
 import arrow
 import discord
 from dateutil.relativedelta import relativedelta
-from discord import Member, app_commands
+from discord import Interaction, Member, User, app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
 from pydis_core.utils.members import get_or_fetch_member
@@ -16,8 +16,10 @@ from bot.constants import Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.infraction._menu import InfractionActionView
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
+from bot.utils.context_menus import ContextMenuDenied, authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import format_user
 
@@ -59,6 +61,42 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.category = "Moderation"
         self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
+
+        self.infract_menu = app_commands.ContextMenu(name="Infract user", callback=self._infract_menu_callback)
+        self.infract_menu.default_permissions = discord.Permissions.none()
+        self.infract_menu.error(context_menu_error_handler)
+
+    async def cog_load(self) -> None:
+        """Add the context menu to the command tree, and schedule the expiration of infractions."""
+        self.bot.tree.add_command(self.infract_menu, guild=discord.Object(constants.Guild.id))
+        await super().cog_load()
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree, and cancel scheduled tasks."""
+        self.bot.tree.remove_command(
+            self.infract_menu.name,
+            guild=discord.Object(constants.Guild.id),
+            type=self.infract_menu.type,
+        )
+        await super().cog_unload()
+
+    @app_commands.guild_only()
+    async def _infract_menu_callback(self, interaction: Interaction, user: Member | User) -> None:
+        """Choose an infraction to apply to the user, and then enter its details."""
+        # Gated by the cog check shared by the commands for all infractions. The command of the chosen infraction is
+        # checked again when it is chosen.
+        ctx = await authorise_command(interaction, "warn")
+
+        # As `respect_role_hierarchy` does for the commands which use it.
+        if isinstance(user, Member) and user.top_role >= interaction.user.top_role:
+            raise ContextMenuDenied("You may not infract someone with an equal or higher top role.")
+
+        await interaction.response.send_message(
+            f"Which infraction do you want to apply to {user.mention}?",
+            view=InfractionActionView(self, ctx, user),
+            ephemeral=True,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
     # region: Permanent infractions
 
