@@ -438,7 +438,7 @@ class Infraction(Converter):
 MemberOrUser = discord.Member | discord.User
 
 
-class _UnionConverter(Converter):
+class UnionConverter(Converter):
     """
     Base for converters which try each of `converters` in order, using the first one that succeeds.
 
@@ -460,25 +460,25 @@ class _UnionConverter(Converter):
         raise BadUnionArgument(ctx.current_parameter, self.converters, errors)
 
 
-class Expiry(_UnionConverter):
+class Expiry(UnionConverter):
     """Converts a duration string into a datetime in the future, or an ISO-8601 datetime string."""
 
     converters = (Duration, ISODateTime)
 
 
-class DurationOrExpiry(_UnionConverter):
+class DurationOrExpiry(UnionConverter):
     """Converts a duration string into a relativedelta, or an ISO-8601 datetime string into a datetime."""
 
     converters = (DurationDelta, ISODateTime)
 
 
-class UnambiguousMemberOrUser(_UnionConverter):
+class UnambiguousMemberOrUser(UnionConverter):
     """Converts a user mention or ID into a `discord.Member`, falling back to a `discord.User`."""
 
     converters = (UnambiguousMember, UnambiguousUser)
 
 
-class MemberOrUserOrObject(_UnionConverter):
+class MemberOrUserOrObject(UnionConverter):
     """Converts to a `discord.Member` or `discord.User` if one is found, or else to a `discord.Object` of an ID."""
 
     converters = (MemberConverter, UserConverter, ObjectConverter)
