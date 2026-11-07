@@ -7,9 +7,9 @@ from enum import Enum
 import arrow
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed, Forbidden, Member, TextChannel, User
+from discord import Colour, Embed, Forbidden, Member, TextChannel, User, app_commands
 from discord.ext import tasks
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from pydis_core.utils import scheduling
 from pydis_core.utils.scheduling import Scheduler
 from redis import RedisError
@@ -20,6 +20,7 @@ from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.hybrid import hybrid_group
 from bot.utils.messages import format_user
 from bot.utils.modlog import send_log_message
 
@@ -51,6 +52,20 @@ class Action(Enum):
     DURATION_UPDATE = ActionInfo(
         Icons.defcon_update, Emojis.defcon_update, Colour.og_blurple(), "**Threshold:** {threshold}\n\n"
     )
+
+
+class DefconThreshold(DurationDelta):
+    """Converts a duration string or a number of days into a relativedelta."""
+
+    async def convert(self, ctx: Context, threshold: str) -> relativedelta:
+        """Convert `threshold` to a relativedelta, treating a plain number as a number of days."""
+        try:
+            return await super().convert(ctx, threshold)
+        except BadArgument:
+            try:
+                return relativedelta(days=int(threshold))
+            except ValueError:
+                raise BadArgument(f"`{threshold}` is not a valid duration string or number of days.")
 
 
 class Defcon(Cog):
@@ -146,7 +161,7 @@ class Defcon(Cog):
                     thumbnail=member.display_avatar.url
                 )
 
-    @group(name="defcon", aliases=("dc",), invoke_without_command=True)
+    @hybrid_group(name="defcon", aliases=("dc",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
@@ -169,9 +184,13 @@ class Defcon(Cog):
         await ctx.send(embed=embed)
 
     @defcon_group.command(name="threshold", aliases=("t", "d"))
+    @app_commands.describe(
+        threshold="The minimum account age, as a duration (e.g. 3d) or a number of days. 0 removes the threshold",
+        expiry="When to automatically remove the threshold, as a duration or an ISO 8601 timestamp",
+    )
     @has_any_role(*MODERATION_ROLES)
     async def threshold_command(
-        self, ctx: Context, threshold: DurationDelta | int, expiry: Expiry | None = None
+        self, ctx: Context, threshold: DefconThreshold, expiry: Expiry | None = None
     ) -> None:
         """
         Set how old an account must be to join the server.
@@ -181,14 +200,17 @@ class Defcon(Cog):
         The expiry allows to automatically remove the threshold after a designated time. If no expiry is specified,
         the cog will remind to remove the threshold hourly.
         """
-        if isinstance(threshold, int):
-            threshold = relativedelta(days=threshold)
+        # The updates are announced in the channel, so only the invoker of a slash command sees a response.
+        await ctx.defer(ephemeral=True)
         await self._update_threshold(ctx.author, ctx.channel, threshold, expiry)
+        if ctx.interaction:
+            await ctx.send("DEFCON threshold updated.", ephemeral=True)
 
     @defcon_group.command()
     @has_any_role(Roles.admins)
     async def shutdown(self, ctx: Context) -> None:
         """Shut down the server by setting send permissions of everyone to False."""
+        await ctx.defer()
         role = ctx.guild.default_role
         permissions = role.permissions
 
@@ -205,6 +227,7 @@ class Defcon(Cog):
     @has_any_role(Roles.admins)
     async def unshutdown(self, ctx: Context) -> None:
         """Open up the server again by setting send permissions of everyone to None."""
+        await ctx.defer()
         role = ctx.guild.default_role
         permissions = role.permissions
 
