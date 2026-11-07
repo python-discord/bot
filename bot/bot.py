@@ -22,6 +22,21 @@ DEPRECATED_PREFIX_NOTICE = (
 )
 
 
+class BotContext(Context):
+    """A context whose `send_help` uses the help cog, as the bot has no discord.py help command."""
+
+    async def send_help(self, *args: object) -> None:
+        """Send help for the given command, group, or cog, defaulting to the invoked command."""
+        help_cog = self.bot.get_cog("Help")
+        entity = args[0] if args else self.command
+        if help_cog is None or entity is None:
+            return
+
+        formatter = type(help_cog.formatter)()
+        formatter.context = self
+        await formatter.send_help_for(getattr(entity, "qualified_name", str(entity)))
+
+
 class StartupError(Exception):
     """Exception class for startup errors."""
 
@@ -78,7 +93,7 @@ class Bot(BotBase):
         origin: discord.Message | discord.Interaction,
         /,
         *,
-        cls: type[Context] = Context,
+        cls: type[Context] = BotContext,
     ) -> Context:
         """
         Get the invocation context, treating a mention followed directly by a code block as an eval command.
