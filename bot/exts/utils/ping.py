@@ -6,6 +6,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import Channels, STAFF_AND_COMMUNITY_ROLES, URLs
 from bot.decorators import in_whitelist
+from bot.utils.hybrid import hybrid_command
 
 DESCRIPTIONS = (
     "Command processing time",
@@ -21,7 +22,7 @@ class Latency(commands.Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @commands.command()
+    @hybrid_command()
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_AND_COMMUNITY_ROLES)
     async def ping(self, ctx: commands.Context) -> None:
         """
@@ -36,6 +37,9 @@ class Latency(commands.Cog):
             bot_ping = "Your clock is out of sync, could not calculate ping."
         else:
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
+
+        # The site healthcheck may take longer than the 3 seconds a slash command has to respond.
+        await ctx.defer()
 
         try:
             async with self.bot.http_session.get(f"{URLs.site_api}/healthcheck") as request:
