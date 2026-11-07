@@ -4,15 +4,23 @@ import textwrap
 import typing as t
 
 import discord
+from discord import app_commands
 from discord.ext import commands
-from discord.ext.commands import Context
+from discord.ext.commands import Context, UserConverter
 from discord.utils import escape_markdown
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Categories
-from bot.converters import DurationOrExpiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
+from bot.converters import (
+    DurationOrExpiry,
+    Infraction,
+    MemberOrUser,
+    MemberOrUserOrObject,
+    Snowflake,
+    UnambiguousUser,
+)
 from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfractionError
 from bot.exts.moderation.infraction import _utils
@@ -21,6 +29,7 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
+from bot.utils.hybrid import hybrid_group
 from bot.utils.modlog import send_log_message
 from bot.utils.time import unpack_duration
 
@@ -38,6 +47,26 @@ Symbols guide:
 \u2003{HIDDEN_INFRACTION_SYMBOL} - The infraction is hidden.
 \u2003{EDITED_DURATION_SYMBOL}- The duration was edited.
 """
+
+
+class DurationOrExpiryOrPermanent(DurationOrExpiry):
+    """Converts a duration, an ISO 8601 timestamp, or "p" or "permanent" which is kept as a string."""
+
+    async def convert(self, ctx: Context, argument: str) -> t.Any:
+        """Convert `argument` to a relativedelta or datetime, or leave it as a string if it means permanent."""
+        if argument in ("p", "permanent"):
+            return argument
+        return await super().convert(ctx, argument)
+
+
+class ActorOrMe(UnambiguousUser):
+    """Converts a user mention or ID to a user, or "m" or "me" to the invoker of the command."""
+
+    async def convert(self, ctx: Context, argument: str) -> discord.User | discord.Member:
+        """Convert `argument` to a user, or to the author of the command if it is "m" or "me"."""
+        if argument in ("m", "me"):
+            return ctx.author
+        return await super().convert(ctx, argument)
 
 
 class ModManagement(commands.Cog):
@@ -63,7 +92,10 @@ class ModManagement(commands.Cog):
         """Get currently loaded Infractions cog instance."""
         return self.bot.get_cog("Infractions")
 
-    @commands.group(name="infraction", aliases=("infr", "infractions", "inf", "i"), invoke_without_command=True)
+    @hybrid_group(
+        name="infraction", aliases=("infr", "infractions", "inf", "i"), invoke_without_command=True, fallback="get"
+    )
+    @app_commands.describe(infraction="The infraction ID, or l, last or recent for your most recent infraction")
     async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
         """
         Infraction management commands.
@@ -75,6 +107,7 @@ class ModManagement(commands.Cog):
             await ctx.send_help(ctx.command)
             return
 
+        await ctx.defer()
         embed = discord.Embed(
             title=f"{self.format_infraction_title(infraction)}",
             colour=discord.Colour.orange()
@@ -82,8 +115,10 @@ class ModManagement(commands.Cog):
         await self.send_infraction_list(ctx, embed, [infraction], ignore_fields=("id",))
 
     @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
+    @app_commands.describe(infraction="The infraction ID, or l, last or recent for your most recent infraction")
     async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
         """Resend a DM to a user about a given infraction of theirs."""
+        await ctx.defer()
         if infraction["hidden"]:
             await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
             return
@@ -106,11 +141,16 @@ class ModManagement(commands.Cog):
     # region: Edit infraction commands
 
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
+    @app_commands.describe(
+        infraction="The infraction ID, or l, last or recent for your most recent infraction",
+        duration="The new duration, e.g. 1d, p or permanent for no expiry, or an ISO 8601 timestamp",
+        reason="Text to append to the reason of the infraction",
+    )
     async def infraction_append(
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
+        duration: DurationOrExpiryOrPermanent | None = None,
         *,
         reason: str = None  # noqa: RUF013
     ) -> None:
@@ -145,12 +185,17 @@ class ModManagement(commands.Cog):
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name="edit", aliases=("e",))
+    @app_commands.describe(
+        infraction="The infraction ID, or l, last or recent for your most recent infraction",
+        duration="The new duration, e.g. 1d, p or permanent for no expiry, or an ISO 8601 timestamp",
+        reason="The new reason of the infraction",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def infraction_edit(
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
+        duration: DurationOrExpiryOrPermanent | None = None,
         *,
         reason: str = None  # noqa: RUF013
     ) -> None:
@@ -177,6 +222,7 @@ class ModManagement(commands.Cog):
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
+        await ctx.defer()
         infraction_id = infraction["id"]
 
         request_data = {}
@@ -245,7 +291,7 @@ class ModManagement(commands.Cog):
             """.rstrip()
 
         changes = " & ".join(confirm_messages)
-        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
+        confirmation = await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
 
         if user:
             user_text = messages.format_user(user)
@@ -260,7 +306,8 @@ class ModManagement(commands.Cog):
         ):
             jump_url = "(Infraction edited in a ModMail channel.)"
         else:
-            jump_url = f"[Click here.]({ctx.message.jump_url})"
+            # For slash commands the invocation message is not a real message, so link to the response instead.
+            jump_url = f"[Click here.]({(confirmation if ctx.interaction else ctx.message).jump_url})"
 
         await send_log_message(
             self.bot,
@@ -271,7 +318,7 @@ class ModManagement(commands.Cog):
             text=textwrap.dedent(f"""
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
-                Edited by: {ctx.message.author.mention}{log_text}
+                Edited by: {ctx.author.mention}{log_text}
                 Jump URL: {jump_url}
             """),
             footer=f"ID: {infraction_id}"
@@ -280,7 +327,9 @@ class ModManagement(commands.Cog):
     # endregion
     # region: Search infractions
 
-    @infraction_group.group(name="search", aliases=("s",), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `search` group is prefix only.
+    # `search user` and `search reason` are available as the flat `search-user` and `search-reason` slash commands.
+    @infraction_group.group(name="search", aliases=("s",), invoke_without_command=True, with_app_command=False)
     async def infraction_search_group(self, ctx: Context, query: UnambiguousUser | Snowflake | str) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
@@ -290,7 +339,7 @@ class ModManagement(commands.Cog):
         else:
             await self.search_user(ctx, query)
 
-    @infraction_search_group.command(name="user", aliases=("member", "userid"))
+    @infraction_search_group.command(name="user", aliases=("member", "userid"), with_app_command=False)
     async def search_user(self, ctx: Context, user: MemberOrUser | discord.Object) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
@@ -320,7 +369,7 @@ class ModManagement(commands.Cog):
 
         await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("user",))
 
-    @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
+    @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"), with_app_command=False)
     async def search_reason(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
         try:
@@ -342,14 +391,32 @@ class ModManagement(commands.Cog):
             reason = reason[:500] + "..."
         await self.send_infraction_list(ctx, embed, infraction_list, reason)
 
+    @infraction_group.command(name="search-user")
+    @app_commands.describe(user="The mention or ID of the user to search infractions for")
+    async def search_user_slash(self, ctx: Context, user: MemberOrUserOrObject) -> None:
+        """Search for infractions by member."""
+        await ctx.defer()
+        await self.search_user(ctx, user)
+
+    @infraction_group.command(name="search-reason")
+    @app_commands.describe(reason="A regular expression to match against the reason of infractions")
+    async def search_reason_slash(self, ctx: Context, reason: str) -> None:
+        """Search for infractions by their reason. Use Re2 for matching."""
+        await ctx.defer()
+        await self.search_reason(ctx, reason)
+
     # endregion
     # region: Search for infractions by given actor
 
     @infraction_group.command(name="by", aliases=("b",))
+    @app_commands.describe(
+        actor="The mention or ID of the user who made the infractions, or m or me for yourself",
+        oldest_first="Send the oldest infractions first",
+    )
     async def search_by_actor(
         self,
         ctx: Context,
-        actor: t.Literal["m", "me"] | UnambiguousUser,
+        actor: ActorOrMe,
         oldest_first: bool = False
     ) -> None:
         """
@@ -359,9 +426,7 @@ class ModManagement(commands.Cog):
 
         Use "1" for `oldest_first` to send oldest infractions first.
         """
-        if isinstance(actor, str):
-            actor = ctx.author
-
+        await ctx.defer()
         if oldest_first:
             ordering = "inserted_at"  # oldest infractions first
         else:
@@ -507,7 +572,7 @@ class ModManagement(commands.Cog):
     async def cog_command_error(self, ctx: Context, error: commands.CommandError) -> None:
         """Handles errors for commands within this cog."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters:
+            if discord.User in error.converters or UserConverter in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 

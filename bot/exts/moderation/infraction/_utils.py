@@ -97,6 +97,24 @@ async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
         await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
 
 
+async def get_invocation_jump_url(ctx: Context) -> str | None:
+    """
+    Get a jump URL to the message which invoked the command in `ctx`, if there is one.
+
+    For slash commands the closest equivalent is the response to the interaction. That is only available if the
+    interaction was already deferred or responded to, so the command should do that before calling this.
+    """
+    # A `FakeContext` has no interaction attribute.
+    interaction = getattr(ctx, "interaction", None)
+    if interaction is None:
+        return ctx.message.jump_url if ctx.message is not None else None
+
+    try:
+        return (await interaction.original_response()).jump_url
+    except discord.HTTPException:
+        return None
+
+
 async def post_infraction(
     ctx: Context,
     user: MemberOrUser,
@@ -119,10 +137,10 @@ async def post_infraction(
     if any(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ) or ctx.message is None:
+    ):
         jump_url = None
     else:
-        jump_url = ctx.message.jump_url
+        jump_url = await get_invocation_jump_url(ctx)
 
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
