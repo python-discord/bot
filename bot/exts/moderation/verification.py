@@ -1,11 +1,13 @@
 import typing as t
 
 import discord
-from discord.ext.commands import Cog, Context, command, has_any_role
+from discord import app_commands
+from discord.ext.commands import Cog, Context, has_any_role
 
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_command
 
 log = get_logger(__name__)
 
@@ -27,10 +29,10 @@ You can find a copy of our rules for reference at <https://pythondiscord.com/pag
 
 Additionally, if you'd like to receive notifications for the announcements \
 we post in <#{constants.Channels.announcements}>
-from time to time, you can send `{constants.Bot.prefix}subscribe` to <#{constants.Channels.bot_commands}> at any time \
+from time to time, you can send `/subscribe` to <#{constants.Channels.bot_commands}> at any time \
 to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `{constants.Bot.prefix}subscribe` to \
+If you'd like to unsubscribe from the announcement notifications, simply send `/subscribe` to \
 <#{constants.Channels.bot_commands}> and click the role again!.
 
 To introduce you to our community, we've made the following video:
@@ -106,7 +108,8 @@ class Verification(Cog):
     # endregion
     # region: miscellaneous
 
-    @command(name="verify")
+    @hybrid_command(name="verify")
+    @app_commands.describe(user="The user to verify")
     @has_any_role(*constants.MODERATION_ROLES)
     async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
         """Command for moderators to verify any user."""
