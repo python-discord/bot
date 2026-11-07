@@ -107,7 +107,7 @@ class ModManagement(commands.Cog):
             await ctx.send_help(ctx.command)
             return
 
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         embed = discord.Embed(
             title=f"{self.format_infraction_title(infraction)}",
             colour=discord.Colour.orange()
@@ -118,7 +118,7 @@ class ModManagement(commands.Cog):
     @app_commands.describe(infraction="The infraction ID, or l, last or recent for your most recent infraction")
     async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
         """Resend a DM to a user about a given infraction of theirs."""
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         if infraction["hidden"]:
             await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
             return
@@ -222,7 +222,7 @@ class ModManagement(commands.Cog):
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         infraction_id = infraction["id"]
 
         request_data = {}
@@ -395,14 +395,14 @@ class ModManagement(commands.Cog):
     @app_commands.describe(user="The mention or ID of the user to search infractions for")
     async def search_user_slash(self, ctx: Context, user: MemberOrUserOrObject) -> None:
         """Search for infractions by member."""
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         await self.search_user(ctx, user)
 
     @infraction_group.command(name="search-reason")
     @app_commands.describe(reason="A regular expression to match against the reason of infractions")
     async def search_reason_slash(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         await self.search_reason(ctx, reason)
 
     # endregion
@@ -426,7 +426,7 @@ class ModManagement(commands.Cog):
 
         Use "1" for `oldest_first` to send oldest infractions first.
         """
-        await ctx.defer()
+        await _utils.defer_once(ctx)
         if oldest_first:
             ordering = "inserted_at"  # oldest infractions first
         else:

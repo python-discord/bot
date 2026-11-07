@@ -97,6 +97,12 @@ async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
         await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
 
 
+async def defer_once(ctx: Context) -> None:
+    """Defer a slash command, unless it was already responded to or deferred by a command which invoked this one."""
+    if ctx.interaction is None or not ctx.interaction.response.is_done():
+        await ctx.defer()
+
+
 async def get_invocation_jump_url(ctx: Context) -> str | None:
     """
     Get a jump URL to the message which invoked the command in `ctx`, if there is one.

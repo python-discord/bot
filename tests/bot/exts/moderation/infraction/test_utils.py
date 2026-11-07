@@ -8,7 +8,7 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot.constants import Colours, Icons
 from bot.exts.moderation.infraction import _utils as utils
-from tests.helpers import MockBot, MockContext, MockMember, MockUser
+from tests.helpers import MockBot, MockContext, MockInteraction, MockMember, MockUser
 
 
 class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
@@ -380,3 +380,47 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(payload, payload | expected)
 
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
+
+
+class SlashCommandHelperTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the helpers which support commands invoked as slash commands."""
+
+    def setUp(self):
+        self.interaction = MockInteraction()
+        self.interaction.response.is_done = MagicMock(return_value=False)
+        self.interaction.original_response = AsyncMock()
+        self.slash_ctx = MockContext(interaction=self.interaction)
+        self.slash_ctx.defer = AsyncMock()
+
+    async def test_defer_once_defers_unresponded_slash_command(self):
+        """A slash command which hasn't responded should be deferred."""
+        await utils.defer_once(self.slash_ctx)
+        self.slash_ctx.defer.assert_awaited_once_with()
+
+    async def test_defer_once_ignores_responded_slash_command(self):
+        """A slash command which was already deferred by a calling command should not be deferred again."""
+        self.interaction.response.is_done.return_value = True
+        await utils.defer_once(self.slash_ctx)
+        self.slash_ctx.defer.assert_not_called()
+
+    async def test_defer_once_prefix_command(self):
+        """A prefix command should be handed to `ctx.defer`, which does nothing for it."""
+        ctx = MockContext(interaction=None)
+        ctx.defer = AsyncMock()
+        await utils.defer_once(ctx)
+        ctx.defer.assert_awaited_once_with()
+
+    async def test_jump_url_of_prefix_command_is_the_invocation_message(self):
+        """The jump URL of a prefix command is that of the message which invoked it."""
+        ctx = MockContext(interaction=None)
+        self.assertEqual(ctx.message.jump_url, await utils.get_invocation_jump_url(ctx))
+
+    async def test_jump_url_of_slash_command_is_the_response(self):
+        """The jump URL of a slash command is that of the response to the interaction."""
+        self.interaction.original_response.return_value.jump_url = "https://discord.com/channels/1/2/3"
+        self.assertEqual("https://discord.com/channels/1/2/3", await utils.get_invocation_jump_url(self.slash_ctx))
+
+    async def test_jump_url_of_slash_command_without_response(self):
+        """There is no jump URL if the response to a slash command can't be fetched."""
+        self.interaction.original_response.side_effect = NotFound(MagicMock(status=404), "Unknown Webhook")
+        self.assertIsNone(await utils.get_invocation_jump_url(self.slash_ctx))
