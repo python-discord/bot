@@ -6,8 +6,9 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from discord import Interaction
-from discord.ext.commands import Cog, Context, Greedy, group
+from discord import Interaction, app_commands
+from discord.ext import commands
+from discord.ext.commands import Cog, Context, Greedy
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.members import get_or_fetch_member
@@ -30,6 +31,7 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
+from bot.utils.hybrid import hybrid_group
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 
@@ -405,6 +407,10 @@ class Reminders(Cog):
 
         Differs from pydis_core.utils.commands.clean_text_or_reply as allows for messages with no content.
         """
+        if ctx.interaction is not None:
+            # There is no message which could be replied to when using a slash command.
+            raise commands.BadArgument("You must provide the content of the reminder.")
+
         content = None
         if reference := ctx.message.reference:
             if isinstance((resolved_message := reference.resolved), discord.Message):
@@ -417,14 +423,26 @@ class Reminders(Cog):
 
         return content
 
-    @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
+    @hybrid_group(
+        name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True, fallback="create"
+    )
+    @app_commands.describe(
+        mentions="Members or roles to also remind, separated by spaces",
+        expiration="When the reminder should arrive, e.g. 3d1M",
+        content="What to remind you about",
+    )
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str | None = None
+        self,
+        ctx: Context,
+        mentions: Greedy[ReminderMention] = None,
+        expiration: Duration = None,
+        *,
+        content: str | None = None,
     ) -> None:
         """
         Commands for managing your reminders.
 
-        The `expiration` duration of `!remind new` supports the following symbols for each unit of time:
+        The `expiration` duration of `/remind create` supports the following symbols for each unit of time:
         - years: `Y`, `y`, `year`, `years`
         - months: `m`, `month`, `months`
         - weeks: `w`, `W`, `week`, `weeks`
@@ -433,11 +451,19 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        For example, to set a reminder that expires in 3 days and 1 minute,
+        you can do `/remind create 3d1M Do something`.
         """
-        await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
+        if expiration is None:
+            # The parameter has a default so that the slash command can accept optional mentions before it.
+            raise commands.MissingRequiredArgument(ctx.command.params["expiration"])
 
-    @remind_group.command(name="new", aliases=("add", "create"))
+        await ctx.defer()
+        await self.new_reminder(ctx, mentions=mentions or [], expiration=expiration, content=content)
+
+    # The slash command for this is the fallback (`/remind create`) of the group above. The fallback can't share
+    # this command's name, as discord.py removes the fallback when re-adding this command to the group.
+    @remind_group.command(name="new", aliases=("add", "create"), with_app_command=False)
     async def new_reminder(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str | None = None
     ) -> None:
@@ -453,7 +479,8 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        For example, to set a reminder that expires in 3 days and 1 minute,
+        you can do `/remind create 3d1M Do something`.
         """
         # If the user is not staff or part of the python community,
         # we need to verify whether or not to make a reminder at all.
@@ -525,6 +552,7 @@ class Reminders(Cog):
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context) -> None:
         """View a paginated embed of all reminders for your user."""
+        await ctx.defer()
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
             "bot/reminders",
@@ -579,12 +607,16 @@ class Reminders(Cog):
             max_lines=3,
         )
 
-    @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `edit` subcommands are prefix only.
+    # They are available as the flat `edit-duration`, `edit-content` and `edit-mentions` slash commands below.
+    @remind_group.group(
+        name="edit", aliases=("change", "modify"), invoke_without_command=True, with_app_command=False
+    )
     async def edit_reminder_group(self, ctx: Context) -> None:
         """Commands for modifying your current reminders."""
         await ctx.send_help(ctx.command)
 
-    @edit_reminder_group.command(name="duration", aliases=("time",))
+    @edit_reminder_group.command(name="duration", aliases=("time",), with_app_command=False)
     async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
         """
         Edit one of your reminder's expiration.
@@ -598,14 +630,14 @@ class Reminders(Cog):
         - minutes: `M`, `minute`, `minutes`
         - seconds: `S`, `s`, `second`, `seconds`
 
-        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `/remind edit-duration 1234 3d1M`.
         """
         formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
         message = f"It will arrive on {formatted_time}."
 
         await self.edit_reminder(ctx, id_, {"expiration": expiration.isoformat()}, message)
 
-    @edit_reminder_group.command(name="content", aliases=("reason",))
+    @edit_reminder_group.command(name="content", aliases=("reason",), with_app_command=False)
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str | None = None) -> None:
         """
         Edit one of your reminder's content.
@@ -617,7 +649,7 @@ class Reminders(Cog):
 
         await self.edit_reminder(ctx, id_, {"content": content})
 
-    @edit_reminder_group.command(name="mentions", aliases=("pings",))
+    @edit_reminder_group.command(name="mentions", aliases=("pings",), with_app_command=False)
     async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[ReminderMention]) -> None:
         """Edit one of your reminder's mentions."""
         # Remove duplicate mentions
@@ -630,6 +662,35 @@ class Reminders(Cog):
 
         mention_ids = [mention.id for mention in mentions]
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
+
+    @remind_group.command(name="edit-duration")
+    @app_commands.describe(
+        id_="The ID of the reminder to edit",
+        expiration="When the reminder should arrive, e.g. 3d1M",
+    )
+    async def edit_reminder_duration_slash(self, ctx: Context, id_: int, expiration: Duration) -> None:
+        """Edit one of your reminder's expiration."""
+        await ctx.defer()
+        await self.edit_reminder_duration(ctx, id_, expiration)
+
+    @remind_group.command(name="edit-content")
+    @app_commands.describe(id_="The ID of the reminder to edit", content="The new content of the reminder")
+    async def edit_reminder_content_slash(self, ctx: Context, id_: int, *, content: str) -> None:
+        """Edit one of your reminder's content."""
+        await ctx.defer()
+        await self.edit_reminder_content(ctx, id_, content=content)
+
+    @remind_group.command(name="edit-mentions")
+    @app_commands.describe(
+        id_="The ID of the reminder to edit",
+        mentions="Members or roles to also remind, separated by spaces. Leave empty to remove all mentions",
+    )
+    async def edit_reminder_mentions_slash(
+        self, ctx: Context, id_: int, mentions: Greedy[ReminderMention] = None
+    ) -> None:
+        """Edit one of your reminder's mentions."""
+        await ctx.defer()
+        await self.edit_reminder_mentions(ctx, id_, mentions or [])
 
     @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict, message: str = "") -> None:
@@ -657,8 +718,10 @@ class Reminders(Cog):
         return True
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
+    @app_commands.describe(ids="The IDs of the reminders to delete, separated by spaces")
     async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
         """Delete up to (and including) 5 of your active reminders."""
+        await ctx.defer()
         if len(ids) > 5:
             await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
             return
