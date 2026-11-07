@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
-from discord import Embed, Forbidden, app_commands
+from discord import Embed, Forbidden, Message, app_commands
 from discord.ext.commands import errors
 from pydis_core.site_api import ResponseCodeError
 
@@ -654,6 +654,23 @@ class AppCommandErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_awaited_once()
         self.interaction.response.send_message.assert_not_awaited()
+
+    async def test_ignores_errors_from_context_menus_with_their_own_handler(self):
+        """The tree handler runs after a menu's own handler, so it must not respond or log a second time."""
+        async def callback(interaction, message: Message) -> None: ...
+
+        async def on_error(interaction, error) -> None: ...
+
+        menu = app_commands.ContextMenu(name="Test", callback=callback)
+        menu.error(on_error)
+        self.interaction.command = menu
+
+        with patch("bot.exts.backend.error_handler.log") as log:
+            await self.handler.handle_app_command_error(self.interaction, RuntimeError("boom"))
+
+        log.error.assert_not_called()
+        self.interaction.response.send_message.assert_not_awaited()
+        self.interaction.followup.send.assert_not_awaited()
 
 
 class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):

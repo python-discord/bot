@@ -63,6 +63,11 @@ class AppCommandErrorHandler(AbstractCommandErrorHandler):
 
     async def handle_app_command_error(self, interaction: Interaction, error: Exception) -> None:
         """Tell the user something went wrong and log the error."""
+        if isinstance(interaction.command, app_commands.ContextMenu) and interaction.command.on_error is not None:
+            # The tree always calls this after a context menu's own error handler, which has already responded
+            # to the user and logged the error if it was unexpected.
+            return
+
         if isinstance(error, app_commands.CommandSignatureMismatch):
             log.warning("Slash command %s is out of sync with Discord: %s", interaction.command, error)
             message = "This command is out of date and is being updated. Please try again in a few minutes."
