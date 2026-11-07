@@ -3,7 +3,10 @@ import contextlib
 from sys import exception
 
 import aiohttp
+import discord
 from discord.errors import Forbidden
+from discord.ext.commands import Context
+from discord.ext.commands.view import StringView
 from pydis_core import BotBase
 from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import new_scope, start_transaction
@@ -12,6 +15,11 @@ from bot import constants, exts
 from bot.log import get_logger
 
 log = get_logger("bot")
+
+DEPRECATED_PREFIX_NOTICE = (
+    "Using the `{prefix}` prefix is deprecated due to restrictions placed on us by Discord, "
+    "please mention {mention} or use slash commands to use this bot"
+)
 
 
 class StartupError(Exception):
@@ -54,6 +62,63 @@ class Bot(BotBase):
         """Default async initialisation method for discord.py."""
         await super().setup_hook()
         await self.load_extensions(exts)
+
+    async def _sync_app_commands(self) -> None:
+        """Sync application commands to the bot's guild only, clearing any previously registered global commands."""
+        await self._extension_loading_task
+        guild = discord.Object(self.guild_id)
+        self.tree.copy_global_to(guild=guild)
+        self.tree.clear_commands(guild=None)
+        await self.tree.sync(guild=guild)
+        # The global tree is now empty, so this removes any stale global commands.
+        await self.tree.sync()
+
+    async def get_context(
+        self,
+        origin: discord.Message | discord.Interaction,
+        /,
+        *,
+        cls: type[Context] = Context,
+    ) -> Context:
+        """
+        Get the invocation context, treating a mention followed directly by a code block as an eval command.
+
+        For example `@Python ```py\nprint("hello")\n``` ` is run as if it were `@Python eval ```py ...``` `.
+        """
+        ctx = await super().get_context(origin, cls=cls)
+
+        if isinstance(origin, discord.Message) and not ctx.valid and ctx.prefix is not None:
+            rest = origin.content[len(ctx.prefix):].lstrip()
+            eval_command = self.get_command("eval")
+            if eval_command is not None and rest.startswith("```"):
+                ctx.command = eval_command
+                ctx.invoked_with = "eval"
+                ctx.view = StringView(f"eval {rest}")
+                ctx.view.index = len("eval")
+
+        return ctx
+
+    def _is_deprecated_prefix_invocation(self, message: discord.Message) -> bool:
+        """Return whether the message invokes an existing command using the old prefix."""
+        prefix = constants.Bot.prefix
+        if message.author.bot or not message.content.startswith(prefix):
+            return False
+
+        view = StringView(message.content)
+        view.skip_string(prefix)
+        # Allow a code block directly after the command name, e.g. `!eval```code```.
+        name = view.get_word().split("`")[0]
+        return bool(name) and self.get_command(name) is not None
+
+    async def process_commands(self, message: discord.Message) -> None:
+        """Reply with a deprecation notice for old prefix invocations, otherwise process commands as normal."""
+        if self._is_deprecated_prefix_invocation(message):
+            notice = DEPRECATED_PREFIX_NOTICE.format(prefix=constants.Bot.prefix, mention=self.user.mention)
+            with contextlib.suppress(discord.HTTPException):
+                await message.reply(notice, mention_author=False)
+            return
+
+        await super().process_commands(message)
 
     async def on_error(self, event: str, /, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
