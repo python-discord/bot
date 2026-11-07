@@ -31,6 +31,7 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_group
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
@@ -212,6 +213,45 @@ class OptInReminderMentionView(discord.ui.View):
         )
 
 
+class RemindMeModal(discord.ui.Modal, title="Remind me"):
+    """A modal asking when to be reminded about a message."""
+
+    duration = discord.ui.TextInput(
+        label="When should the reminder arrive?",
+        placeholder="e.g. 3d1M for 3 days and 1 minute",
+        max_length=50,
+    )
+
+    def __init__(self, cog: Reminders, ctx: Context, message: discord.Message):
+        super().__init__()
+        self.cog = cog
+        self.ctx = ctx
+        self.message = message
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        """Create the reminder through the same code as `/remind create`."""
+        ctx = self.ctx
+        # Respond to the modal submission rather than to the menu invocation.
+        ctx.interaction = interaction
+
+        try:
+            expiration = await Duration().convert(ctx, self.duration.value)
+        except commands.BadArgument as e:
+            await interaction.response.send_message(f":x: {e}", ephemeral=True)
+            return
+
+        await ctx.defer()
+        # As when replying to a message, a message without text content is reminded about by referencing it.
+        content = self.message.content or "*See referenced message.*"
+        await self.cog.create_reminder(
+            ctx, mentions=[], expiration=expiration, content=content, jump_url=self.message.jump_url
+        )
+
+    async def on_error(self, interaction: Interaction, error: Exception) -> None:
+        """Handle any exceptions in the processing of the modal."""
+        await context_menu_error_handler(interaction, error)
+
+
 class Reminders(Cog):
     """Provide in-channel reminder functionality."""
 
@@ -219,12 +259,21 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
+        self.remind_me_menu = app_commands.ContextMenu(name="Remind me", callback=self._remind_me_menu_callback)
+        self.remind_me_menu.error(context_menu_error_handler)
+
     async def cog_unload(self) -> None:
-        """Cancel scheduled tasks."""
+        """Cancel scheduled tasks and remove the context menu."""
         self.scheduler.cancel_all()
+        self.bot.tree.remove_command(
+            self.remind_me_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.remind_me_menu.type,
+        )
 
     async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
+        self.bot.tree.add_command(self.remind_me_menu, guild=discord.Object(Guild.id))
         await self.bot.wait_until_guild_available()
         response = await self.bot.api_client.get(
             "bot/reminders",
@@ -482,6 +531,28 @@ class Reminders(Cog):
         For example, to set a reminder that expires in 3 days and 1 minute,
         you can do `/remind create 3d1M Do something`.
         """
+        await self.create_reminder(ctx, mentions, expiration, content)
+
+    @app_commands.guild_only()
+    async def _remind_me_menu_callback(self, interaction: Interaction, message: discord.Message) -> None:
+        """Ask when to be reminded about the message, then create the reminder."""
+        # Gated in the same way as the `remind new` command.
+        ctx = await authorise_command(interaction, "remind new")
+        await interaction.response.send_modal(RemindMeModal(self, ctx, message))
+
+    async def create_reminder(
+        self,
+        ctx: Context,
+        mentions: t.Iterable[Mentionable],
+        expiration: datetime,
+        content: str | None = None,
+        jump_url: str | None = None,
+    ) -> None:
+        """
+        Create a reminder for the author of `ctx` and confirm it.
+
+        `jump_url` is the link to include in the reminder, which defaults to the message of the context.
+        """
         # If the user is not staff or part of the python community,
         # we need to verify whether or not to make a reminder at all.
         if await has_no_roles_check(ctx, *STAFF_AND_COMMUNITY_ROLES):
@@ -526,7 +597,7 @@ class Reminders(Cog):
             json={
                 "author": ctx.author.id,
                 "channel_id": ctx.message.channel.id,
-                "jump_url": ctx.message.jump_url,
+                "jump_url": jump_url or ctx.message.jump_url,
                 "content": content,
                 "expiration": expiration.isoformat(),
                 "mentions": mention_ids,
