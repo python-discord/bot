@@ -466,21 +466,21 @@ class Filtering(Cog):
     # region: filter commands
 
     @hybrid_group(aliases=("filters", "f"), invoke_without_command=True, fallback="get")
-    @app_commands.describe(id_="The ID of the filter to show")
-    async def filter(self, ctx: Context, id_: int | None = None) -> None:
+    @app_commands.describe(filter_id="The ID of the filter to show")
+    async def filter(self, ctx: Context, filter_id: int | None = None) -> None:
         """
         Group for managing filters.
 
         If a valid filter ID is provided, an embed describing the filter will be posted.
         """
-        if not ctx.invoked_subcommand and not id_:
+        if not ctx.invoked_subcommand and not filter_id:
             await ctx.send_help(ctx.command)
             return
 
         await defer_once(ctx)
-        result = self._get_filter_by_id(id_)
+        result = self._get_filter_by_id(filter_id)
         if result is None:
-            await ctx.send(f":x: Could not find a filter with ID `{id_}`.")
+            await ctx.send(f":x: Could not find a filter with ID `{filter_id}`.")
             return
         filter_, filter_list, list_type = result
 
@@ -494,7 +494,7 @@ class Filtering(Cog):
         embed.description = f"`{filter_.content}`"
         if filter_.description:
             embed.description += f" - {filter_.description}"
-        embed.set_author(name=f"Filter {id_} - " + f"{filter_list[list_type].label}".title())
+        embed.set_author(name=f"Filter {filter_id} - " + f"{filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
