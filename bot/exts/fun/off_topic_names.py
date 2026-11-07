@@ -5,17 +5,18 @@ import json
 import random
 from functools import partial
 
-from discord import ButtonStyle, Colour, Embed, HTTPException, Interaction
+from discord import ButtonStyle, Colour, Embed, HTTPException, Interaction, app_commands
 from discord.ext import tasks
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, has_any_role
 from discord.ui import Button, View
 from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Channels, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.hybrid import hybrid_group
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
@@ -25,6 +26,12 @@ OT_NUMBER_INDEX = 2
 NAME_START_INDEX = 4
 
 log = get_logger(__name__)
+
+
+async def _defer(ctx: Context) -> None:
+    """Defer a slash command, unless it already responded or was deferred by a command which invoked this one."""
+    if ctx.interaction is not None and not ctx.interaction.response.is_done():
+        await ctx.defer()
 
 
 class OffTopicNames(Cog):
@@ -91,6 +98,7 @@ class OffTopicNames(Cog):
 
     async def list_ot_names(self, ctx: Context, active: bool = True) -> None:
         """Send an embed containing active/deactivated off-topic channel names."""
+        await _defer(ctx)
         result = await self.bot.api_client.get("bot/off-topic-channel-names", params={"active": json.dumps(active)})
         lines = sorted(f"- {name}" for name in result)
         embed = Embed(
@@ -103,13 +111,14 @@ class OffTopicNames(Cog):
             embed.description = "Hmmm, seems like there's nothing here yet."
             await ctx.send(embed=embed)
 
-    @group(name="otname", aliases=("otnames", "otn"), invoke_without_command=True)
+    @hybrid_group(name="otname", aliases=("otnames", "otn"), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
         """Add or list items from the off-topic channel name rotation."""
         await ctx.send_help(ctx.command)
 
     @otname_group.command(name="add", aliases=("a",))
+    @app_commands.describe(name="The off-topic name to add")
     @has_any_role(*MODERATION_ROLES)
     async def add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """
@@ -117,6 +126,7 @@ class OffTopicNames(Cog):
 
         The name is not added if it is too similar to an existing name.
         """
+        await _defer(ctx)
         existing_names = await self.bot.api_client.get("bot/off-topic-channel-names")
         close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
 
@@ -127,15 +137,17 @@ class OffTopicNames(Cog):
             ctx.author, name, match)
             await ctx.send(
                 f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
-                f"Use `{BotConfig.prefix}otn forceadd` to override this check."
+                "Use `/otname forceadd` to override this check."
             )
         else:
             await self._add_name(ctx, name)
 
     @otname_group.command(name="forceadd", aliases=("fa",))
+    @app_commands.describe(name="The off-topic name to add")
     @has_any_role(*MODERATION_ROLES)
     async def force_add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Forcefully adds a new off-topic name to the rotation."""
+        await _defer(ctx)
         await self._add_name(ctx, name)
 
     async def _add_name(self, ctx: Context, name: str) -> None:
@@ -146,27 +158,34 @@ class OffTopicNames(Cog):
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
     @otname_group.command(name="delete", aliases=("remove", "rm", "del", "d"))
+    @app_commands.describe(name="The off-topic name to remove")
     @has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
+        await _defer(ctx)
         await self.bot.api_client.delete(f"bot/off-topic-channel-names/{name}")
 
         log.info("%s deleted the off-topic channel name '%s'", ctx.author, name)
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
     @otname_group.command(name="activate", aliases=("whitelist",))
+    @app_commands.describe(name="The off-topic name to activate")
     @has_any_role(*MODERATION_ROLES)
     async def activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
         """Activate an existing off-topic name."""
+        await _defer(ctx)
         await self.toggle_ot_name_activity(ctx, name, True)
 
     @otname_group.command(name="deactivate", aliases=("blacklist",))
+    @app_commands.describe(name="The off-topic name to deactivate")
     @has_any_role(*MODERATION_ROLES)
     async def de_activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
         """Deactivate a specific off-topic name."""
+        await _defer(ctx)
         await self.toggle_ot_name_activity(ctx, name, False)
 
     @otname_group.command(name="reroll")
+    @app_commands.describe(ot_channel_index="The index of the off-topic channel, defaults to the current channel")
     @has_any_role(*MODERATION_ROLES)
     async def re_roll_command(self, ctx: Context, ot_channel_index: int | None = None) -> None:
         """
@@ -174,6 +193,7 @@ class OffTopicNames(Cog):
 
         ot_channel_index: [0, 1, 2, ...]
         """
+        await _defer(ctx)
         if ot_channel_index is not None:
             try:
                 channel = self.bot.get_channel(CHANNELS[ot_channel_index])
@@ -211,7 +231,7 @@ class OffTopicNames(Cog):
                 "to `%s`.",
             ctx.author, old_ot_name, new_channel_name)
 
-            await ctx.message.reply(
+            await ctx.reply(
                 f":ok_hand: Off-topic channel re-named from `{old_ot_name}` "
                 f"to `{new_channel_name}`. "
             )
@@ -256,9 +276,11 @@ class OffTopicNames(Cog):
             view.add_item(btn_yes)
             view.add_item(btn_no)
 
-            await ctx.message.reply(embed=embed, view=view)
+            await ctx.reply(embed=embed, view=view)
 
-    @otname_group.group(name="list", aliases=("l",), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so `list` and its subcommands are prefix only.
+    # They are available as the flat `list-active` and `list-deactivated` slash commands below.
+    @otname_group.group(name="list", aliases=("l",), invoke_without_command=True, with_app_command=False)
     @has_any_role(*MODERATION_ROLES)
     async def list_command(self, ctx: Context) -> None:
         """
@@ -268,22 +290,36 @@ class OffTopicNames(Cog):
         """
         await self.active_otnames_command(ctx)
 
-    @list_command.command(name="active", aliases=("a",))
+    @list_command.command(name="active", aliases=("a",), with_app_command=False)
     @has_any_role(*MODERATION_ROLES)
     async def active_otnames_command(self, ctx: Context) -> None:
         """List active off-topic channel names."""
         await self.list_ot_names(ctx, True)
 
-    @list_command.command(name="deactivated", aliases=("d",))
+    @list_command.command(name="deactivated", aliases=("d",), with_app_command=False)
     @has_any_role(*MODERATION_ROLES)
     async def deactivated_otnames_command(self, ctx: Context) -> None:
         """List deactivated off-topic channel names."""
         await self.list_ot_names(ctx, False)
 
+    @otname_group.command(name="list-active")
+    @has_any_role(*MODERATION_ROLES)
+    async def list_active_slash(self, ctx: Context) -> None:
+        """List active off-topic channel names."""
+        await self.active_otnames_command(ctx)
+
+    @otname_group.command(name="list-deactivated")
+    @has_any_role(*MODERATION_ROLES)
+    async def list_deactivated_slash(self, ctx: Context) -> None:
+        """List deactivated off-topic channel names."""
+        await self.deactivated_otnames_command(ctx)
+
     @otname_group.command(name="search", aliases=("s",))
+    @app_commands.describe(query="The text to search for")
     @has_any_role(*MODERATION_ROLES)
     async def search_command(self, ctx: Context, *, query: OffTopicName) -> None:
         """Search for an off-topic name."""
+        await _defer(ctx)
         query = OffTopicName.translate_name(query, from_unicode=False).lower()
 
         # Map normalized names to returned names for search purposes
