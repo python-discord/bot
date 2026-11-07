@@ -6,8 +6,9 @@ from collections.abc import Mapping
 from textwrap import shorten
 from typing import Any, TYPE_CHECKING
 
+import discord
 import rapidfuzz
-from discord import AllowedMentions, Colour, Embed, Guild, Message, Role, app_commands
+from discord import AllowedMentions, Colour, Embed, Guild, Interaction, Message, Role, app_commands
 from discord.ext.commands import BucketType, Cog, Context, Greedy, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
@@ -26,6 +27,7 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
 from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.messages import send_denial
 
@@ -48,6 +50,9 @@ class Information(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+        self.raw_json_menu = app_commands.ContextMenu(name="Raw JSON", callback=self._raw_json_menu_callback)
+        self.raw_json_menu.error(context_menu_error_handler)
 
     @staticmethod
     def get_channel_type_counts(guild: Guild) -> defaultdict[str, int]:
@@ -603,6 +608,14 @@ class Information(Cog):
 
         await self.send_raw_content(ctx, message, json=True)
 
+    @app_commands.guild_only()
+    async def _raw_json_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """Show the raw API response for the message in a copy-pasteable Python format."""
+        # Gated in the same way as the `raw json` command.
+        ctx = await authorise_command(interaction, "raw json")
+        await ctx.defer(ephemeral=True)
+        await self.send_raw_content(ctx, message, json=True)
+
     async def _set_rules_command_help(self) -> None:
         help_string = f"{self.rules.help}\n\n"
         help_string += "__Available keywords per rule__:\n\n"
@@ -715,7 +728,16 @@ class Information(Cog):
 
     async def cog_load(self) -> None:
         """Carry out cog asynchronous initialisation."""
+        self.bot.tree.add_command(self.raw_json_menu, guild=discord.Object(constants.Guild.id))
         await self._set_rules_command_help()
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree."""
+        self.bot.tree.remove_command(
+            self.raw_json_menu.name,
+            guild=discord.Object(constants.Guild.id),
+            type=self.raw_json_menu.type,
+        )
 
 
 async def setup(bot: Bot) -> None:
