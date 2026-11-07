@@ -2,6 +2,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from bot import constants
 from bot.bot import Bot, BotContext
 from bot.exts.info.help import HelpFormatter
 
@@ -56,3 +57,68 @@ class ExtensionLoadingTests(unittest.IsolatedAsyncioTestCase):
                 await self.bot.load_extension("b")
 
         self.assertTrue(self.bot._extensions_finished_loading.is_set())
+
+
+class DeprecatedPrefixTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the notice sent when the old prefix is used."""
+
+    def setUp(self):
+        from discord.ext import commands
+
+        from bot.utils.hybrid import hybrid_command, hybrid_group
+
+        class TestCog(commands.Cog):
+            @hybrid_group(fallback="get")
+            async def things(self, ctx): ...
+
+            @things.command(name="search")
+            async def search(self, ctx): ...
+
+            @commands.command()
+            async def plain(self, ctx): ...
+
+            @hybrid_command()
+            async def solo(self, ctx): ...
+
+        self.bot = Bot.__new__(Bot)
+        self.commands = {
+            "things": TestCog.things,
+            "solo": TestCog.solo,
+            "plain": TestCog.plain,
+        }
+        self.bot.get_command = lambda name: self.commands.get(name)
+        self.message = MagicMock(content="", author=MagicMock(bot=False))
+
+        prefix_patcher = patch.object(constants.Bot, "prefix", "!")
+        prefix_patcher.start()
+        self.addCleanup(prefix_patcher.stop)
+
+    def notice(self, content: str) -> str | None:
+        self.message.content = content
+        command = self.bot._get_deprecated_prefix_command(self.message)
+        if command is None:
+            return None
+        with patch.object(Bot, "user", MagicMock(display_name="Python"), create=True):
+            return self.bot._build_deprecated_prefix_notice(command)
+
+    def test_slash_and_mention_forms(self):
+        self.assertEqual(
+            self.notice("!solo"),
+            "Using the `!` prefix is deprecated due to restrictions placed on us by Discord, "
+            "please use `@Python solo` or the slash command `/solo` to use this bot.",
+        )
+
+    def test_group_callback_uses_fallback_and_subcommands_are_resolved(self):
+        self.assertIn("`/things get`", self.notice("!things 5"))
+        self.assertIn("`@Python things search` or the slash command `/things search`", self.notice("!things search x"))
+
+    def test_prefix_only_command_has_no_slash_form(self):
+        notice = self.notice("!plain")
+        self.assertIn("`@Python plain`", notice)
+        self.assertNotIn("slash", notice)
+
+    def test_unknown_commands_and_bots_are_ignored(self):
+        self.assertIsNone(self.notice("!nope"))
+        self.assertIsNone(self.notice("hello"))
+        self.message.author.bot = True
+        self.assertIsNone(self.notice("!solo"))
