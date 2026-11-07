@@ -2,10 +2,11 @@ import copy
 import difflib
 
 import discord
-from discord import ButtonStyle, Embed, Forbidden, Interaction, Member, User
+from discord import ButtonStyle, Embed, Forbidden, Interaction, Member, User, app_commands
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.error_handling import handle_forbidden_from_block
+from pydis_core.utils.error_handling.commands import AbstractCommandErrorHandler, CommandErrorManager
 from pydis_core.utils.interactions import DeleteMessageButton, ViewWithUserAndRoleCheck
 from sentry_sdk import new_scope
 
@@ -47,6 +48,41 @@ class HelpEmbedView(ViewWithUserAndRoleCheck):
         await interaction.response.send_message(embed=self.help_embed, ephemeral=True)
 
 
+class AppCommandErrorHandler(AbstractCommandErrorHandler):
+    """
+    Handles errors raised by the command tree before a hybrid command's own error handling can run.
+
+    Failures inside a hybrid command's invocation are dispatched to `ErrorHandler.on_command_error`. Only
+    errors that escape that, such as a `CommandSignatureMismatch` (the command changed since it was synced),
+    reach the tree's error handler.
+    """
+
+    async def should_handle_error(self, error: Exception) -> bool:
+        """Handle every error."""
+        return True
+
+    async def handle_app_command_error(self, interaction: Interaction, error: Exception) -> None:
+        """Tell the user something went wrong and log the error."""
+        if isinstance(error, app_commands.CommandSignatureMismatch):
+            log.warning("Slash command %s is out of sync with Discord: %s", interaction.command, error)
+            message = "This command is out of date and is being updated. Please try again in a few minutes."
+        else:
+            log.error("Unhandled application command error for %s", interaction.command, exc_info=error)
+            message = (
+                "Sorry, an unexpected error occurred. Please let us know!\n\n"
+                f"```{error.__class__.__name__}: {error}```"
+            )
+
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+
+    async def handle_text_command_error(self, context: Context, error: Exception) -> None:
+        """Text command errors are handled by `ErrorHandler.on_command_error`; just log if one gets here."""
+        log.error("Unhandled text command error for %s", context.command, exc_info=error)
+
+
 class ErrorHandler(Cog):
     """Handles errors emitted from commands."""
 
@@ -86,12 +122,14 @@ class ErrorHandler(Cog):
         """
         command = ctx.command
 
+        e = self._unwrap_hybrid_error(e)
+
         if hasattr(e, "handled"):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
         debug_message = (
-            f"Command {command} invoked by {ctx.message.author} with error "
+            f"Command {command} invoked by {ctx.author} with error "
             f"{e.__class__.__name__}: {e}"
         )
 
@@ -122,17 +160,21 @@ class ErrorHandler(Cog):
             await self.handle_check_failure(ctx, e)
         elif isinstance(e, errors.CommandOnCooldown | errors.MaxConcurrencyReached):
             log.debug(debug_message)
-            await ctx.send(e)
+            await ctx.send(e, ephemeral=True)
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
-                await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
+                await ctx.send(
+                    f"{e.original} Please wait for it to finish and try again later.",
+                    ephemeral=True,
+                )
             elif isinstance(e.original, InvalidInfractedUserError):
-                await ctx.send(f"Cannot infract that user. {e.original.reason}")
+                await ctx.send(f"Cannot infract that user. {e.original.reason}", ephemeral=True)
             elif isinstance(e.original, Forbidden):
                 try:
-                    await handle_forbidden_from_block(e.original, ctx.message)
+                    # There is no invocation message to react to or reply to for slash commands.
+                    await handle_forbidden_from_block(e.original, None if ctx.interaction else ctx.message)
                 except Forbidden:
                     await self.handle_unexpected_error(ctx, e.original)
             else:
@@ -147,6 +189,27 @@ class ErrorHandler(Cog):
         else:
             # ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    @staticmethod
+    def _unwrap_hybrid_error(e: errors.CommandError) -> errors.CommandError:
+        """
+        Convert a `HybridCommandError` into the error a prefix invocation would have raised.
+
+        Exceptions raised inside a hybrid command invoked as a slash command arrive wrapped as
+        `HybridCommandError(app_commands.CommandInvokeError | TransformerError)`, with the real exception on the
+        wrapped error's `__cause__`/`original`. These are rewrapped as a `CommandInvokeError`, as for prefix commands.
+        """
+        if not isinstance(e, errors.HybridCommandError):
+            return e
+
+        inner = e.original
+        original = getattr(inner, "original", None) or inner.__cause__
+        if isinstance(original, errors.CommandError):
+            return original
+        if isinstance(original, Exception):
+            return errors.CommandInvokeError(original)
+        # An app command error with no underlying exception, e.g. a failed app command check.
+        return errors.CommandInvokeError(inner)
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -163,7 +226,8 @@ class ErrorHandler(Cog):
             return False
 
         command = ctx.invoked_with.lower()
-        args = ctx.message.content.lower().split(" ")
+        # Drop the prefix (the bot mention) so that `args[0]` is the command name as it was before.
+        args = ctx.message.content[len(ctx.prefix or ""):].lstrip().lower().split(" ")
 
         try:
             if not await silence_command.can_run(ctx):
@@ -229,7 +293,7 @@ class ErrorHandler(Cog):
         """
         Attempt to run eval or timeit command with triple backticks directly after command.
 
-        For example: !eval```print("hi")```
+        For example: @bot eval```print("hi")```
 
         Return True if command was invoked, else False
         """
@@ -312,7 +376,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, ephemeral=True)
             self.bot.stats.incr("errors.argument_parsing_error")
             return
         else:
@@ -330,11 +394,22 @@ class ErrorHandler(Cog):
         # ctx.command shouldn't be None here, but check just to be safe.
         help_embed_creator = getattr(self.bot.help_command, "command_formatting", None)
         if not help_embed_creator or not ctx.command:
-            await ctx.send(embed=error_embed)
+            await ctx.send(embed=error_embed, ephemeral=True)
             return
 
-        self.bot.help_command.context = ctx
-        help_embed, _ = await help_embed_creator(ctx.command)
+        try:
+            self.bot.help_command.context = ctx
+            help_embed, _ = await help_embed_creator(ctx.command)
+        except Exception:
+            log.exception("Failed to build the help embed for command %s", ctx.command)
+            await ctx.send(embed=error_embed, ephemeral=True)
+            return
+
+        if ctx.interaction:
+            # Slash command errors are ephemeral, so the delete button wouldn't work. Include the help directly.
+            await ctx.send(embeds=[error_embed, help_embed], ephemeral=True)
+            return
+
         view = HelpEmbedView(help_embed, ctx.author)
         view.message = await ctx.send(embed=error_embed, view=view)
 
@@ -360,18 +435,19 @@ class ErrorHandler(Cog):
         if isinstance(e, bot_missing_errors):
             ctx.bot.stats.incr("errors.bot_permission_error")
             await ctx.send(
-                "Sorry, it looks like I don't have the permissions or roles I need to do that."
+                "Sorry, it looks like I don't have the permissions or roles I need to do that.",
+                ephemeral=True,
             )
         elif isinstance(e, ContextCheckFailure | errors.NoPrivateMessage):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
-            await ctx.send(e)
+            await ctx.send(e, ephemeral=True)
 
     @staticmethod
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
         """Send an error message in `ctx` for ResponseCodeError and log it."""
         if e.status == 404:
             log.debug("API responded with 404 for command %s", ctx.command)
-            await ctx.send("There does not seem to be anything matching your query.")
+            await ctx.send("There does not seem to be anything matching your query.", ephemeral=True)
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
             log.error(
@@ -379,15 +455,15 @@ class ErrorHandler(Cog):
                 ctx.command,
                 e.response_json or e.response_text,
             )
-            await ctx.send("According to the API, your request is malformed.")
+            await ctx.send("According to the API, your request is malformed.", ephemeral=True)
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
             log.warning("API responded with %s for command %s", e.status, ctx.command)
-            await ctx.send("Sorry, there seems to be an internal issue with the API.")
+            await ctx.send("Sorry, there seems to be an internal issue with the API.", ephemeral=True)
             ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
             log.warning("Unexpected API response for command %s: %s", ctx.command, e.status)
-            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
+            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).", ephemeral=True)
             ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod
@@ -395,7 +471,8 @@ class ErrorHandler(Cog):
         """Send a generic error message in `ctx` and log the exception as an error with exc_info."""
         await ctx.send(
             f"Sorry, an unexpected error occurred. Please let us know!\n\n"
-            f"```{e.__class__.__name__}: {e}```"
+            f"```{e.__class__.__name__}: {e}```",
+            ephemeral=True,
         )
 
         ctx.bot.stats.incr("errors.unexpected")
@@ -407,20 +484,29 @@ class ErrorHandler(Cog):
             }
 
             scope.set_tag("command", ctx.command.qualified_name)
-            scope.set_tag("message_id", ctx.message.id)
+            if ctx.interaction:
+                # There is no invocation message for slash commands, the interaction is the closest equivalent.
+                invocation = f"/{ctx.command.qualified_name}"
+                scope.set_tag("interaction_id", ctx.interaction.id)
+            else:
+                invocation = ctx.message.content
+                scope.set_tag("message_id", ctx.message.id)
+
             scope.set_tag("channel_id", ctx.channel.id)
+            scope.set_extra("full_message", invocation)
 
-            scope.set_extra("full_message", ctx.message.content)
-
-            if ctx.guild is not None:
+            if ctx.guild is not None and not ctx.interaction:
                 scope.set_extra(
                     "jump_to",
                     f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}"
                 )
 
-            log.error("Error executing command invoked by %s: %s", ctx.message.author, ctx.message.content, exc_info=e)
+            log.error("Error executing command invoked by %s: %s", ctx.author, invocation, exc_info=e)
 
 
 async def setup(bot: Bot) -> None:
     """Load the ErrorHandler cog."""
+    # Hybrid command failures that never reach `on_command_error` (e.g. `CommandSignatureMismatch`) end up in
+    # the command tree's error handler, which forwards to the error manager registered on the bot.
+    bot.register_command_error_manager(CommandErrorManager(default=AppCommandErrorHandler()))
     await bot.add_cog(ErrorHandler(bot))
