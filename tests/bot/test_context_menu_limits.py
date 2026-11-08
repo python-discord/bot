@@ -12,7 +12,7 @@ from bot.exts.utils.reminders import Reminders
 from tests import helpers
 
 # Discord allows at most this many menus of each type per guild.
-MAX_MENUS_PER_TYPE = 5
+MAX_MENUS_PER_TYPE = 15
 
 
 class ContextMenuLimitTests(unittest.TestCase):
