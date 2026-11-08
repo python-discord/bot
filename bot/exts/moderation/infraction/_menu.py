@@ -36,13 +36,14 @@ class InfractionAction:
     label: str
     command: str
     duration: Duration = Duration.NONE
+    reason_required: bool = False
 
 
 # The infractions which have a slash command, in the order they are listed in. The command is what gates the action,
 # and what is run to apply it.
 INFRACTION_ACTIONS = {
-    "warn": InfractionAction("Warn", "warn"),
-    "note": InfractionAction("Note", "note"),
+    "warn": InfractionAction("Warn", "warn", reason_required=True),
+    "note": InfractionAction("Note", "note", reason_required=True),
     "kick": InfractionAction("Kick", "kick"),
     "timeout": InfractionAction("Timeout", "timeout", Duration.OPTIONAL),
     "ban": InfractionAction("Ban", "ban"),
@@ -74,9 +75,9 @@ class InfractionModal(discord.ui.Modal):
             self.add_item(self.duration)
 
         self.reason = discord.ui.TextInput(
-            label="Reason (optional)",
+            label="Reason" if action.reason_required else "Reason (optional)",
             style=discord.TextStyle.long,
-            required=False,
+            required=action.reason_required,
             max_length=REASON_MAX_LENGTH,
         )
         self.add_item(self.reason)
@@ -90,6 +91,11 @@ class InfractionModal(discord.ui.Modal):
         # The menu was gated when it was invoked, but the roles of the invoker may have changed since.
         await authorise_context(ctx, self.action.command)
         command = ctx.command
+
+        reason = self.reason.value.strip()
+        if self.action.reason_required and not reason:
+            await interaction.response.send_message(":x: A reason is required.", ephemeral=True)
+            return
 
         args = []
         if self.duration is not None:
@@ -106,7 +112,7 @@ class InfractionModal(discord.ui.Modal):
 
         # The work is only done after this, as the response to a modal must be sent within 3 seconds.
         await ctx.defer()
-        await ctx.invoke(command, self.user, *args, reason=self.reason.value.strip() or None)
+        await ctx.invoke(command, self.user, *args, reason=reason or None)
 
     async def _convert_duration(self, argument: str) -> relativedelta | datetime | None:
         """Convert the duration the way the commands do, returning None if it is not valid."""

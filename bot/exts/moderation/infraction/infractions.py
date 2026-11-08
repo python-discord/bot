@@ -102,7 +102,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @hybrid_command(aliases=("warning",))
     @app_commands.describe(user="The user to warn, as a mention or ID", reason="Why the user is being warned")
-    async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
+    async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str) -> None:
         """Warn a user for the given reason."""
         await _utils.defer_once(ctx)
         if not isinstance(user, Member):
@@ -379,7 +379,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @hybrid_command(hidden=True)
     @app_commands.describe(user="The user to add a note to, as a mention or ID", reason="The contents of the note")
-    async def note(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str | None = None) -> None:
+    async def note(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: str) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
         await _utils.defer_once(ctx)
         infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)

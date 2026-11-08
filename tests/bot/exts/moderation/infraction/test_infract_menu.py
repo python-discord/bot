@@ -127,11 +127,23 @@ class InfractMenuTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_submitting_without_a_reason(self):
         interaction, ctx = self._interaction()
-        modal = self._modal("warn", ctx)
+        modal = self._modal("kick", ctx)
 
         await modal.on_submit(interaction)
 
-        ctx.invoke.assert_awaited_once_with(self.cog.warn, self.target, reason=None)
+        ctx.invoke.assert_awaited_once_with(self.cog.kick, self.target, reason=None)
+
+    async def test_reason_is_required_for_warnings_and_notes(self):
+        for key in ("warn", "note"):
+            with self.subTest(action=key):
+                interaction, ctx = self._interaction()
+                modal = self._modal(key, ctx, reason="   ")
+
+                self.assertTrue(modal.reason.required)
+                await modal.on_submit(interaction)
+
+                ctx.invoke.assert_not_called()
+                interaction.response.send_message.assert_awaited_once()
 
     async def test_submitting_with_a_duration(self):
         interaction, ctx = self._interaction()
