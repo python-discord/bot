@@ -424,3 +424,49 @@ class SlashCommandHelperTests(unittest.IsolatedAsyncioTestCase):
         """There is no jump URL if the response to a slash command can't be fetched."""
         self.interaction.original_response.side_effect = NotFound(MagicMock(status=404), "Unknown Webhook")
         self.assertIsNone(await utils.get_invocation_jump_url(self.slash_ctx))
+
+
+class BuildInfractionEmbedTests(unittest.TestCase):
+    """Tests for the embed echoing back an applied infraction."""
+
+    def setUp(self):
+        self.user = MockMember(id=1, mention="<@1>")
+        self.actor = MockMember(id=2, mention="<@2>")
+
+    def _infraction(self, **kwargs):
+        infraction = {
+            "id": 42,
+            "type": "ban",
+            "reason": "spamming",
+            "expires_at": None,
+            "last_applied": "2026-01-01T00:00:00+00:00",
+        }
+        return infraction | kwargs
+
+    def test_embed_echoes_the_infraction(self):
+        embed = utils.build_infraction_embed(self._infraction(), self.user, self.actor)
+
+        self.assertEqual(embed.title, "Ban applied")
+        self.assertEqual(embed.description, "spamming")
+        self.assertEqual(embed.footer.text, "ID: 42")
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Member"], "<@1>")
+        self.assertEqual(fields["Actor"], "<@2>")
+        self.assertEqual(fields["Expires"], "Never")
+
+    def test_infractions_without_expiry_have_no_expires_field(self):
+        for infr_type in ("kick", "note", "warning"):
+            with self.subTest(type=infr_type):
+                embed = utils.build_infraction_embed(self._infraction(type=infr_type), self.user, self.actor)
+
+                self.assertNotIn("Expires", [field.name for field in embed.fields])
+
+    def test_underscores_are_removed_from_the_type(self):
+        embed = utils.build_infraction_embed(self._infraction(type="voice_mute"), self.user, self.actor)
+
+        self.assertEqual(embed.title, "Voice Mute applied")
+
+    def test_missing_reason(self):
+        embed = utils.build_infraction_embed(self._infraction(reason=None), self.user, self.actor)
+
+        self.assertEqual(embed.description, "No reason provided.")

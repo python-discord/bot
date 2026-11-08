@@ -223,6 +223,26 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
     )
 
 
+def build_infraction_embed(infraction: Infraction, user: MemberOrUser, actor: MemberOrUser) -> discord.Embed:
+    """Build an embed echoing back an applied infraction, for the confirmation sent in mod channels."""
+    infr_type = infraction["type"].replace("_", " ")
+    embed = discord.Embed(
+        title=f"{infr_type.title()} applied",
+        description=infraction["reason"] or "No reason provided.",
+        colour=Colours.soft_red,
+    )
+    embed.set_author(name=str(user), icon_url=user.display_avatar.url)
+    embed.add_field(name="Member", value=user.mention)
+    embed.add_field(name="Actor", value=actor.mention)
+
+    if infraction["type"] not in ("kick", "note", "warning"):
+        expiry = time.format_with_duration(infraction["expires_at"], infraction["last_applied"])
+        embed.add_field(name="Expires", value=expiry or "Never")
+
+    embed.set_footer(text=f"ID: {infraction['id']}")
+    return embed
+
+
 async def notify_infraction(
         infraction: Infraction,
         user: MemberOrUser,

@@ -326,7 +326,13 @@ class InfractionScheduler:
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
         mentions = discord.AllowedMentions(users=[user], roles=False)
-        sent_msg = await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
+        send_kwargs = {}
+        if not failed and is_mod_channel(ctx.channel):
+            # Mods need to be able to see at a glance what has been applied.
+            send_kwargs["embed"] = _utils.build_infraction_embed(infraction, user, ctx.author)
+        sent_msg = await ctx.send(
+            f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions, **send_kwargs
+        )
 
         # Only tidy up bot issued infractions in non-mod channels.
         if infraction["actor"] == self.bot.user.id and not is_mod_channel(ctx.channel):
