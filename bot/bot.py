@@ -114,6 +114,9 @@ class Bot(BotBase):
         """
         ctx = await super().get_context(origin, cls=cls)
 
+        if isinstance(origin, discord.Message):
+            self._skip_whitespace_after_prefix(ctx, origin)
+
         if isinstance(origin, discord.Message) and not ctx.valid and ctx.prefix is not None:
             rest = origin.content[len(ctx.prefix):].lstrip()
             eval_command = self.get_command("eval")
@@ -124,6 +127,25 @@ class Bot(BotBase):
                 ctx.view.index = len("eval")
 
         return ctx
+
+    def _skip_whitespace_after_prefix(self, ctx: Context, message: discord.Message) -> None:
+        """
+        Find the command again if the prefix is followed by extra whitespace, e.g. `@Python  ping`.
+
+        discord.py only allows for the whitespace that is part of the prefix, so a second space leaves no command name.
+        """
+        if ctx.command is not None or ctx.prefix is None:
+            return
+
+        view = StringView(message.content)
+        if not view.skip_string(ctx.prefix):
+            return
+
+        view.skip_ws()
+        invoker = view.get_word()
+        ctx.view = view
+        ctx.invoked_with = invoker
+        ctx.command = self.all_commands.get(invoker)
 
     def _get_deprecated_prefix_command(self, message: discord.Message) -> commands.Command | None:
         """Return the command that the message invokes using the old prefix, if it is one."""

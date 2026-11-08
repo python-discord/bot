@@ -122,3 +122,42 @@ class DeprecatedPrefixTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.notice("hello"))
         self.message.author.bot = True
         self.assertIsNone(self.notice("!solo"))
+
+
+class WhitespaceAfterPrefixTests(unittest.TestCase):
+    """Tests for finding the command when extra whitespace follows the mention."""
+
+    def setUp(self):
+        self.bot = Bot.__new__(Bot)
+        self.ping = object()
+        self.bot.__dict__["all_commands"] = {"ping": self.ping}
+        self.prefix = "<@1> "
+
+    def _ctx(self, content: str):
+        message = MagicMock(content=content)
+        ctx = MagicMock(command=None, prefix=self.prefix)
+        self.bot._skip_whitespace_after_prefix(ctx, message)
+        return ctx
+
+    def test_extra_spaces_are_ignored(self):
+        for spaces in (" ", "   ", " \t"):
+            with self.subTest(spaces=repr(spaces)):
+                ctx = self._ctx(f"<@1> {spaces}ping arg")
+
+                self.assertIs(ctx.command, self.ping)
+                self.assertEqual(ctx.invoked_with, "ping")
+                self.assertEqual(ctx.view.buffer[ctx.view.index:], " arg")
+
+    def test_unknown_command_is_still_unknown(self):
+        ctx = self._ctx("<@1>  nope")
+
+        self.assertIsNone(ctx.command)
+        self.assertEqual(ctx.invoked_with, "nope")
+
+    def test_found_commands_are_untouched(self):
+        found = object()
+        ctx = MagicMock(command=found, prefix=self.prefix)
+
+        self.bot._skip_whitespace_after_prefix(ctx, MagicMock(content="<@1> ping"))
+
+        self.assertIs(ctx.command, found)
