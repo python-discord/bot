@@ -32,8 +32,8 @@ class TimeTests(unittest.TestCase):
             (relativedelta(days=2, hours=2), "days", 2, "2 days"),
         )
 
-        for delta, precision, max_units, expected in test_cases:
-            with self.subTest(delta=delta, precision=precision, max_units=max_units, expected=expected):
+        for i, (delta, precision, max_units, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, precision=precision, max_units=max_units, expected=expected):
                 actual = time.humanize_delta(delta, precision=precision, max_units=max_units)
                 self.assertEqual(actual, expected)
 
@@ -57,8 +57,8 @@ class TimeTests(unittest.TestCase):
             (None, "Why hello there!", float("inf"), None),
         )
 
-        for expiry, date_from, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
+        for i, (expiry, date_from, max_units, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, expiry=expiry, max_units=max_units, expected=expected):
                 self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_format_with_duration_custom_units(self):
@@ -70,8 +70,8 @@ class TimeTests(unittest.TestCase):
              "<t:32531918940:f> (6 months, 28 days, 23 hours and 54 minutes)")
         )
 
-        for expiry, date_from, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
+        for i, (expiry, date_from, max_units, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, max_units=max_units, expected=expected):
                 self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_format_with_duration_normal_usage(self):
@@ -94,8 +94,8 @@ class TimeTests(unittest.TestCase):
             (None, datetime(2019, 11, 23, 23, 49, 5, tzinfo=UTC), 2, None),
         )
 
-        for expiry, date_from, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
+        for i, (expiry, date_from, max_units, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, max_units=max_units, expected=expected):
                 self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_until_expiration_with_duration_none_expiry(self):
@@ -109,8 +109,8 @@ class TimeTests(unittest.TestCase):
             ("3000-11-23T20:09:00Z", "<t:32531918940:R>")
         )
 
-        for expiry, expected in test_cases:
-            with self.subTest(expiry=expiry, expected=expected):
+        for i, (expiry, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, expiry=expiry, expected=expected):
                 self.assertEqual(time.until_expiration(expiry,), expected)
 
     def test_until_expiration_normal_usage(self):
@@ -123,6 +123,6 @@ class TimeTests(unittest.TestCase):
             ("3000-11-23T20:09:00Z", "<t:32531918940:R>"),
         )
 
-        for expiry, expected in test_cases:
-            with self.subTest(expiry=expiry, expected=expected):
+        for i, (expiry, expected) in enumerate(test_cases):
+            with self.subTest(test_case=i, expiry=expiry, expected=expected):
                 self.assertEqual(time.until_expiration(expiry), expected)
