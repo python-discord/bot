@@ -15,6 +15,7 @@ from discord.ext.commands import (
     Converter,
     IDConverter,
     MemberConverter,
+    MessageConverter,
     ObjectConverter,
     UserConverter,
 )
@@ -482,6 +483,23 @@ class MemberOrUserOrObject(UnionConverter):
     """Converts to a `discord.Member` or `discord.User` if one is found, or else to a `discord.Object` of an ID."""
 
     converters = (MemberConverter, UserConverter, ObjectConverter)
+
+
+class _MessageByReference(MessageConverter):
+    """Converts a message link or `channel_id-message_id` pair to a `discord.Message`, but not a bare ID."""
+
+    async def convert(self, ctx: Context, argument: str) -> discord.Message:
+        """Convert the `argument` to a `discord.Message`."""
+        if argument.isdigit():
+            # A bare ID is more likely a user's, and a message can't be found without its channel.
+            raise BadArgument(f"`{argument}` is not a message link.")
+        return await super().convert(ctx, argument)
+
+
+class UserOrMessage(UnionConverter):
+    """Converts a message link to a `discord.Message`, or a user mention, ID or name into a member or user."""
+
+    converters = (_MessageByReference, MemberConverter, UserConverter)
 
 
 class _Integer(Converter):

@@ -526,7 +526,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
         constants.MODERATION_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.author)
 
-        await self.cog.user_info(self.cog, ctx, message=helpers.MockMessage(author=self.target))
+        await self.cog.user_info(self.cog, ctx, helpers.MockMessage(author=self.target))
 
         ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
 

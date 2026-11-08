@@ -19,7 +19,7 @@ from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUp
 from bot import constants
 from bot.bot import Bot
 from bot.constants import BaseURLs, Emojis
-from bot.converters import MemberOrUser
+from bot.converters import MemberOrUser, UserOrMessage
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
 from bot.log import get_logger
@@ -251,14 +251,14 @@ class Information(Cog):
 
     @hybrid_command(name="user", aliases=["user_info", "member", "member_info", "u"])
     @app_commands.describe(
-        user="The user to get information on, defaults to you",
-        message="A link to a message to get information on its author instead",
+        user_or_message="A user to get information on, or a link to a message to get its author. Defaults to you",
     )
-    async def user_info(self, ctx: Context, user: MemberOrUser | None = None, message: Message | None = None) -> None:
+    async def user_info(self, ctx: Context, user_or_message: UserOrMessage | None = None) -> None:
         """Returns info about a user."""
         await ctx.defer()
-        if passed_as_message := message is not None:
-            user = message.author
+        user = user_or_message
+        if passed_as_message := isinstance(user_or_message, Message):
+            user = user_or_message.author
 
         if user is None:
             user = ctx.author
