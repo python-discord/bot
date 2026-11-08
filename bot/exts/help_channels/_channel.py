@@ -24,7 +24,7 @@ NEW_POST_MSG = """
 
 :warning: Do not pip install anything that isn't related to your question, especially if asked to over DMs.
 """
-NEW_POST_FOOTER = "Closes after a period of inactivity, or when you send /help-forum close."
+NEW_POST_FOOTER = "Closes after a period of inactivity, or when you send `/help-forum close`."
 NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
 CLOSED_POST_MSG = f"""
