@@ -10,6 +10,7 @@ from bot.bot import Bot
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.help_channels._channel import is_help_forum_post
+from bot.exts.info.codeblock import _auto_formatting
 from bot.exts.info.codeblock._instructions import get_instructions
 from bot.log import get_logger
 from bot.utils import has_lines
@@ -118,6 +119,32 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
 
+    async def send_proper_markdown_message_and_delete_original(self, message: discord.Message,
+                                                               proper_markdown: str) -> None:
+        """
+        Send an embed with `proper_formatting`, replacing the user-given message containing non-formatted code blocks.
+
+        This embed will delete the original user's message immediately.
+
+        The purpose of this function is for when automatically fixing the formatting of a message is easier than
+        spamming the chat with instructions on how to fix the code.
+
+        Addresses: https://github.com/python-discord/bot/issues/2328
+        """
+        log.info(f"Sending proper Markdown formatted message, thereby replacing message {message.id}.")
+
+        await message.channel.send(
+            f"Hey {message.author.mention}!\n"
+            "We detected improperly formatted code blocks in your message and managed to automatically fix them.\n"
+            "Type `!code` to learn how to properly format code.\n\n"
+            "Your message was:\n"
+            + proper_markdown
+        )
+        await message.delete()
+
+        # Increase amount of codeblock replacements in stats
+        self.bot.stats.incr("codeblock_replacements")
+
     def should_parse(self, message: discord.Message) -> bool:
         """
         Return True if `message` should be parsed.
@@ -147,6 +174,11 @@ class CodeBlockCog(Cog, name="Code Block"):
         # When debugging, ignore cooldowns.
         if self.is_on_cooldown(msg.channel) and not constants.DEBUG_MODE:
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
+            return
+
+        auto_formatted_message = _auto_formatting.try_fix_markdown(msg.content)
+        if auto_formatted_message:
+            await self.send_proper_markdown_message_and_delete_original(msg, auto_formatted_message)
             return
 
         instructions = get_instructions(msg.content)
