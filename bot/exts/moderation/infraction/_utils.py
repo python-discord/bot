@@ -140,10 +140,7 @@ async def post_infraction(
 
     current_time = arrow.utcnow()
 
-    if any(
-        is_in_category(ctx.channel, category)
-        for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ):
+    if is_in_category(ctx.channel, Categories.modmail):
         jump_url = None
     else:
         jump_url = await get_invocation_jump_url(ctx)

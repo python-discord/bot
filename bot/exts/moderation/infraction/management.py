@@ -300,10 +300,7 @@ class ModManagement(commands.Cog):
             user_text = f"<@{user_id}>"
             thumbnail = None
 
-        if any(
-                is_in_category(ctx.channel, category)
-                for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-        ):
+        if is_in_category(ctx.channel, Categories.modmail):
             jump_url = "(Infraction edited in a ModMail channel.)"
         else:
             # `ctx.send` may be replaced with a no-op (e.g. by cleanban), so don't use the confirmation message.

@@ -184,10 +184,7 @@ class _Categories(EnvConfig, env_prefix="categories_"):
 
     logs: int = 468520609152892958
     moderators: int = 749736277464842262
-    modmail: int = 714494672835444826
-    new_modmail: int = 1533613940318146702
-    appeals: int = 890331800025563216
-    appeals_2: int = 895417395261341766
+    modmail: int = 1533613940318146702
     voice: int = 356013253765234688
 
     # 2021 Summer Code Jam
@@ -207,10 +204,7 @@ class _Guild(EnvConfig, env_prefix="guild_"):
     moderation_categories: tuple[int, ...] = (
         Categories.moderators,
         Categories.modmail,
-        Categories.new_modmail,
         Categories.logs,
-        Categories.appeals,
-        Categories.appeals_2
     )
     moderation_channels: tuple[int, ...] = (Channels.admins, Channels.admin_spam, Channels.mods)
     modlog_blacklist: tuple[int, ...] = (
