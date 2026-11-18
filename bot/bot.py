@@ -5,7 +5,6 @@ from sys import exception
 import aiohttp
 import discord
 from discord.errors import Forbidden
-from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.view import StringView
 from pydis_core import BotBase
@@ -16,13 +15,6 @@ from bot import constants, exts
 from bot.log import get_logger
 
 log = get_logger("bot")
-
-DEPRECATED_PREFIX_NOTICE = (
-    "Using the `{prefix}` prefix is deprecated due to restrictions placed on us by Discord, "
-    "please use `@{bot_name} {command}`{slash} to use this bot."
-)
-DEPRECATED_PREFIX_SLASH = " or the slash command `/{command}`"
-
 
 class BotContext(Context):
     """A context whose `send_help` uses the help cog, as the bot has no discord.py help command."""
@@ -146,63 +138,6 @@ class Bot(BotBase):
         ctx.view = view
         ctx.invoked_with = invoker
         ctx.command = self.all_commands.get(invoker)
-
-    def _get_deprecated_prefix_command(self, message: discord.Message) -> commands.Command | None:
-        """Return the command that the message invokes using the old prefix, if it is one."""
-        prefix = constants.Bot.prefix
-        if message.author.bot or not message.content.startswith(prefix):
-            return None
-
-        view = StringView(message.content)
-        view.skip_string(prefix)
-        # Allow a code block directly after the command name, e.g. `!eval```code```.
-        name = view.get_word().split("`")[0]
-        command = self.get_command(name) if name else None
-
-        # Descend into subcommands, e.g. `!infraction search user`.
-        while isinstance(command, commands.Group):
-            view.skip_ws()
-            subcommand = command.get_command(view.get_word())
-            if subcommand is None:
-                break
-            command = subcommand
-
-        return command
-
-    @staticmethod
-    def _get_slash_command_name(command: commands.Command) -> str | None:
-        """Return the name used to invoke the command as a slash command, or None if it isn't one."""
-        names = []
-        current = command
-        while current is not None:
-            if getattr(current, "app_command", None) is None:
-                return None
-            names.append(current.name)
-            current = current.parent
-
-        # A slash group can't be invoked, so a group callback is exposed as its fallback subcommand.
-        if fallback := getattr(command, "fallback", None):
-            names.insert(0, fallback)
-        return " ".join(reversed(names))
-
-    def _build_deprecated_prefix_notice(self, command: commands.Command) -> str:
-        """Build the message telling users to mention the bot or use slash commands instead of the old prefix."""
-        slash_name = self._get_slash_command_name(command)
-        return DEPRECATED_PREFIX_NOTICE.format(
-            prefix=constants.Bot.prefix,
-            bot_name=self.user.display_name,
-            command=command.qualified_name,
-            slash=DEPRECATED_PREFIX_SLASH.format(command=slash_name) if slash_name else "",
-        )
-
-    async def process_commands(self, message: discord.Message) -> None:
-        """Reply with a deprecation notice for old prefix invocations, otherwise process commands as normal."""
-        if (command := self._get_deprecated_prefix_command(message)) is not None:
-            with contextlib.suppress(discord.HTTPException):
-                await message.reply(self._build_deprecated_prefix_notice(command), mention_author=False)
-            return
-
-        await super().process_commands(message)
 
     async def on_error(self, event: str, /, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""

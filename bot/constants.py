@@ -36,7 +36,6 @@ DEBUG_MODE = Miscellaneous.debug
 
 class _Bot(EnvConfig, env_prefix="bot_"):
 
-    prefix: str = "!"
     sentry_dsn: str = ""
     token: str
     trace_loggers: str = "*"

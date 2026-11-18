@@ -8,4 +8,4 @@ Note that backticks are not quotes, see [this](https://superuser.com/questions/2
 
 If the wrapped code itself has a backtick, wrap it with two backticks from each side: \`\`back \` tick\`\` would become ``back ` tick``.
 
-For how to make multiline codeblocks see the `!codeblock` tag.
+For how to make multiline codeblocks see the `/tag codeblock`.

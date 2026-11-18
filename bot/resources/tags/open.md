@@ -5,9 +5,9 @@ embed:
 The built-in function `open()` is one of several ways to open files on your computer. It accepts many different parameters, so this tag will only go over two of them (`file` and `mode`). For more extensive documentation on all these parameters, consult the [official documentation](https://docs.python.org/3/library/functions.html#open). The object returned from this function is a [file object or stream](https://docs.python.org/3/glossary.html#term-file-object), for which the full documentation can be found [here](https://docs.python.org/3/library/io.html#io.TextIOBase).
 
 See also:  
-- `!tags with` for information on context managers  
-- `!tags pathlib` for an alternative way of opening files  
-- `!tags seek` for information on changing your position in a file  
+- `/tag with` for information on context managers  
+- `/tag pathlib` for an alternative way of opening files  
+- `/tag seek` for information on changing your position in a file  
 
 **The `file` parameter**
 
@@ -15,7 +15,7 @@ This should be a [path-like object](https://docs.python.org/3/glossary.html#term
 
 An absolute path is the full path from your root directory to the file you want to open. Generally this is the option you should choose so it doesn't matter what directory you're in when you execute your module.
 
-See `!tags relative-path` for more information on relative paths.
+See `/tag relative-path` for more information on relative paths.
 
 **The `mode` parameter**
 

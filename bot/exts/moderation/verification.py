@@ -97,7 +97,7 @@ class Verification(Cog):
         """Check if we need to send a verification DM to a gated user."""
         if before.pending is True and after.pending is False:
             try:
-                # If the member has not received a DM from our !accept command
+                # If the member has not received a DM from our accept command
                 # and has gone through the alternate gating system we should send
                 # our alternate welcome DM which includes info such as our welcome
                 # video.
