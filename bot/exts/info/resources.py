@@ -1,10 +1,11 @@
 import re
 from urllib.parse import quote
 
-from discord import Embed
+from discord import Embed, app_commands
 from discord.ext import commands
 
 from bot.bot import Bot
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import send_or_reply
 
 REGEX_CONSECUTIVE_NON_LETTERS = r"[^A-Za-z0-9]+"
@@ -47,8 +48,9 @@ class Resources(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="resources", aliases=("res",))
-    async def resources_command(self, ctx: commands.Context, *, resource_topic: str | None) -> None:
+    @hybrid_command(name="resources", aliases=("res",))
+    @app_commands.describe(resource_topic="A topic to filter the resources page by")
+    async def resources_command(self, ctx: commands.Context, *, resource_topic: str | None = None) -> None:
         """Display information and a link to the Python Discord website Resources page."""
         url = RESOURCE_URL
 

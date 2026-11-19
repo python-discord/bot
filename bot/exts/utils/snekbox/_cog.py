@@ -516,8 +516,9 @@ class Snekbox(Cog):
 
         if new_ctx.command is command:
             log.trace(f"Message {message.id} invokes {command} command.")
-            split = message.content.split(maxsplit=1)
-            code = split[1] if len(split) > 1 else None
+            view = new_ctx.view
+            view.skip_ws()
+            code = view.read_rest() or None
         else:
             log.trace(f"Message {message.id} does not invoke {command} command.")
             code = message.content

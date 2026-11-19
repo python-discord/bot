@@ -5,14 +5,15 @@ import typing
 from contextlib import suppress
 from datetime import datetime
 
-from discord import Embed, NotFound
-from discord.ext.commands import Cog, Context, command
+from discord import Embed, NotFound, app_commands
+from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import send_or_reply, wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
@@ -42,9 +43,11 @@ class PyPI(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="pypi", aliases=("package", "pack", "pip"))
+    @hybrid_command(name="pypi", aliases=("package", "pack", "pip"))
+    @app_commands.describe(package="The name of the PyPI package")
     async def get_package_info(self, ctx: Context, package: str) -> None:
         """Provide information about a specific package from PyPI."""
+        await ctx.defer()
         embed = Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
         embed.set_thumbnail(url=PYPI_ICON)
 
@@ -86,7 +89,11 @@ class PyPI(Cog):
                     embed.description = "There was an error when fetching your PyPI package."
                     log.trace(f"Error when fetching PyPI package: {response.status}.")
 
-        if error:
+        if error and ctx.interaction is not None:
+            # There is no invocation message to clean up, and the error is only relevant to the invoker.
+            await ctx.send(embed=embed, ephemeral=True)
+
+        elif error:
             error_message = await send_or_reply(ctx, embed)
             await wait_for_deletion(error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY)
 

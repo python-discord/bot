@@ -79,7 +79,8 @@ async def wait_for_deletion(
     An `allow_mods` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
     the message.
     """
-    if message.guild is None:
+    # Followups to a slash command are sent without guild info, so check for private channels instead.
+    if message.channel.type in (discord.ChannelType.private, discord.ChannelType.group):
         raise ValueError("Message must be sent on a guild")
 
     if attach_emojis:

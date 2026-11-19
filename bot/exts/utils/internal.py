@@ -10,13 +10,14 @@ from typing import Any
 
 import arrow
 import discord
-from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
+from discord.ext.commands import Cog, Context, has_any_role, is_owner
 from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
 from bot.constants import BaseURLs, DEBUG_MODE, Roles
 from bot.log import get_logger
 from bot.utils import find_nth_occurrence
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -219,14 +220,15 @@ async def func():  # (None,) -> Any
         await ctx.send(f"```py\n{out}```", embed=embed)
         return None
 
-    @group(name="internal", aliases=("int",))
+    @hybrid_group(name="internal", aliases=("int",))
     @has_any_role(Roles.owners, Roles.admins, Roles.core_developers)
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @internal_group.command(name="eval", aliases=("e",))
+    # `eval` is only available by mentioning the bot, it is not registered as a slash command.
+    @internal_group.command(name="eval", aliases=("e",), with_app_command=False)
     @has_any_role(Roles.admins, Roles.owners)
     async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""

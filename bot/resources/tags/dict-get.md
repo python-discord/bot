@@ -15,4 +15,4 @@ Below, 3 is the default value to be returned, because the key doesn't exist-
 >>> print(my_dict.get("foobar", 3))
 3
 ```
-Some other methods for handling `KeyError`s gracefully are the [`dict.setdefault`](https://docs.python.org/3/library/stdtypes.html#dict.setdefault) method and [`collections.defaultdict`](https://docs.python.org/3/library/collections.html#collections.defaultdict) (check out the `!defaultdict` tag).
+Some other methods for handling `KeyError`s gracefully are the [`dict.setdefault`](https://docs.python.org/3/library/stdtypes.html#dict.setdefault) method and [`collections.defaultdict`](https://docs.python.org/3/library/collections.html#collections.defaultdict) (check out the `/tag defaultdict`).

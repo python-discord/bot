@@ -4,8 +4,8 @@ import arrow
 import dateutil
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse as dateutil_parse
-from discord import Member
-from discord.ext.commands import BadArgument, Cog, Context, group
+from discord import Member, app_commands
+from discord.ext.commands import BadArgument, Cog, Context
 from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
@@ -13,6 +13,7 @@ from bot.bot import Bot
 from bot.constants import Emojis, Guild, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
+from bot.utils.hybrid import hybrid_group
 from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
@@ -170,12 +171,15 @@ class ModPings(Cog):
 
         return f"Pings are {state}.{schedule}"
 
-    @group(name="modpings", aliases=("modping",), invoke_without_command=True)
+    @hybrid_group(name="modpings", aliases=("modping",), invoke_without_command=True)
     async def modpings_group(self, ctx: Context) -> None:
         """Allow the removal and re-addition of the pingable moderators role."""
         await ctx.send_help(ctx.command)
 
-    @modpings_group.command(name="off")
+    @modpings_group.command(
+        name="off", description="Temporarily removes the pingable moderators role. Overrides recurring schedule."
+    )
+    @app_commands.describe(duration="How long to turn pings off for, e.g. 3h, or an ISO 8601 timestamp (max 30 days)")
     async def off_command(self, ctx: Context, duration: Expiry) -> None:
         """
         Temporarily removes the pingable moderators role for a set amount of time. Overrides recurring schedule.
@@ -194,6 +198,7 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """  # noqa: RUF002
+        await ctx.defer()
         delta = duration - arrow.utcnow()
         if delta > timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")
@@ -223,6 +228,7 @@ class ModPings(Cog):
 
         Puts you back on your daily schedule if there is one, or re-applies the pingable moderators role immediately.
         """
+        await ctx.defer()
         mod = ctx.author
         if not await self.pings_off_mods.contains(mod.id):
             await ctx.send(":question: You're not in a special off period. Maybe you're off schedule?")
@@ -238,7 +244,9 @@ class ModPings(Cog):
         status = await self._get_current_status(mod.id)
         await ctx.send(f"{Emojis.check_mark} {status}")
 
-    @modpings_group.group(name="schedule", aliases=("s",), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `schedule` subcommands are prefix only.
+    # They are available as the flat `schedule-set` and `schedule-delete` slash commands below.
+    @modpings_group.group(name="schedule", aliases=("s",), invoke_without_command=True, with_app_command=False)
     async def schedule_modpings(self, ctx: Context, start_time: str, end_time: str, tz: float | None) -> None:
         """
         Schedule pingable role to be added at `start` time and removed at `end` time. Any previous schedule is dropped.
@@ -249,6 +257,7 @@ class ModPings(Cog):
 
         The schedule may be temporarily overridden using the on/off commands.
         """
+        await ctx.defer()
         try:
             start, end = dateutil_parse(start_time).replace(tzinfo=UTC), dateutil_parse(end_time).replace(tzinfo=UTC)
         except dateutil.parser._parser.ParserError as e:
@@ -260,8 +269,8 @@ class ModPings(Cog):
         if (end - start) < timedelta(hours=MIN_SHIFT_HOURS) or (end - start) > timedelta(hours=MAX_SHIFT_HOURS):
             await ctx.reply(
                 f":x: Daily pings-on schedule duration must be between {MIN_SHIFT_HOURS} and {MAX_SHIFT_HOURS} hours."
-                " If you want to remove your schedule use the `modpings schedule delete` command."
-                " If you want to remove pings for an extended period of time use the `modpings off` command."
+                " If you want to remove your schedule use the `/modpings schedule-delete` command."
+                " If you want to remove pings for an extended period of time use the `/modpings off` command."
             )
             return
 
@@ -286,17 +295,36 @@ class ModPings(Cog):
             f"{discord_timestamp(end, TimestampFormats.TIME)}."
         )
 
-    @schedule_modpings.command(name="delete", aliases=("del", "d"))
+    @schedule_modpings.command(name="delete", aliases=("del", "d"), with_app_command=False)
     async def modpings_schedule_delete(self, ctx: Context) -> None:
         """Delete your modpings schedule."""
+        await ctx.defer()
         self._shift_scheduler.cancel(ctx.author.id)
         await self.modpings_schedules.delete(ctx.author.id)
         await self.handle_moderator_state(ctx.author)
         await ctx.reply(f"{Emojis.ok_hand} Deleted your modpings schedule.")
 
+    @modpings_group.command(name="schedule-set")
+    @app_commands.describe(
+        start_time="When pings turn on each day, in HH:MM format",
+        end_time="When pings turn off each day, in HH:MM format",
+        tz="Your time zone offset from UTC in hours. Times are in UTC by default",
+    )
+    async def schedule_modpings_slash(
+        self, ctx: Context, start_time: str, end_time: str, tz: float | None = None
+    ) -> None:
+        """Schedule pingable role to be added at the start time and removed at the end time each day."""
+        await self.schedule_modpings(ctx, start_time, end_time, tz)
+
+    @modpings_group.command(name="schedule-delete")
+    async def modpings_schedule_delete_slash(self, ctx: Context) -> None:
+        """Delete your modpings schedule."""
+        await self.modpings_schedule_delete(ctx)
+
     @modpings_group.command(name="status", aliases=("state",))
     async def status_command(self, ctx: Context) -> None:
         """Show your current state and schedule (if one exists)."""
+        await ctx.defer()
         status = await self._get_current_status(ctx.author.id)
         await ctx.reply(f":information: {status}")
 
@@ -305,10 +333,11 @@ class ModPings(Cog):
         """
         Attempt to re-sync your pingable moderators role with the stored state.
 
-        You can view your stored state using the `modpings status` command.
+        You can view your stored state using the `/modpings status` command.
 
         If there is a reoccurring problem, please report it.
         """
+        await ctx.defer()
         await self.handle_moderator_state(ctx.author)
         await ctx.reply(f"{Emojis.ok_hand} State re-synced.")
 

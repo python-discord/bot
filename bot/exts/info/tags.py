@@ -62,7 +62,7 @@ class TagIdentifier(NamedTuple):
     @classmethod
     def from_string(cls, string: str) -> TagIdentifier:
         """Create a `TagIdentifier` instance from the beginning of `string`."""
-        split_string = string.removeprefix(constants.Bot.prefix).split(" ", maxsplit=2)
+        split_string = string.split(" ", maxsplit=2)
         if len(split_string) == 1:
             return cls(None, split_string[0])
         return cls(split_string[0], split_string[1])

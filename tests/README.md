@@ -135,7 +135,7 @@ from tests.helpers import MockBot, MockContext
 
 class BotCogTests(unittest.TestCase):
     def test_echo_command_correctly_echoes_arguments(self):
-        """Test if the `!echo <text>` command correctly echoes the content."""
+        """Test if the `/echo <text>` command correctly echoes the content."""
         mocked_bot = MockBot()
         bot_cog = bot.Bot(mocked_bot)
 

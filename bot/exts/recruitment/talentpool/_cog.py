@@ -7,23 +7,27 @@ import discord
 from async_rediscache import RedisCache
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User, app_commands
 from discord.ext import commands, tasks
-from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
 from pydis_core.utils.members import get_or_fetch_member
 from sentry_sdk import new_scope
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
-from bot.converters import MemberOrUser, UnambiguousMemberOrUser
+from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.converters import MemberOrUser, NomineeOrNominationID, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
+from bot.utils.hybrid import hybrid_group
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
+# The most characters in a page of the nomination history sent by the context menu, within the embed limit.
+HISTORY_PAGE_SIZE = 3900
 
 # The number of days that a user can have no activity (no messages sent)
 # until they should be removed from the talentpool.
@@ -119,8 +123,14 @@ class TalentPool(Cog, name="Talentpool"):
         self.nominate_user_context_menu.error(self._nominate_context_error)
         self.bot.tree.add_command(self.nominate_user_context_menu, guild=discord.Object(Guild.id))
 
+        self.history_menu = app_commands.ContextMenu(name="Talentpool history", callback=self._history_menu_callback)
+        self.history_menu.default_permissions = discord.Permissions.none()
+        self.history_menu.error(context_menu_error_handler)
+
     async def cog_load(self) -> None:
         """Start autoreview loop if enabled."""
+        self.bot.tree.add_command(self.history_menu, guild=discord.Object(Guild.id))
+
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
 
@@ -130,19 +140,23 @@ class TalentPool(Cog, name="Talentpool"):
         """Return whether automatic posting of nomination reviews is enabled."""
         return await self.talentpool_settings.get(AUTOREVIEW_ENABLED_KEY, True)
 
-    @group(name="talentpool", aliases=("tp", "talent", "nomination", "n"), invoke_without_command=True)
+    @hybrid_group(name="talentpool", aliases=("tp", "talent", "nomination", "n"), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.group(name="autoreview", aliases=("ar",), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `autoreview` subcommands are prefix only.
+    # They are available as the flat `autoreview-set` and `autoreview-status` slash commands.
+    @nomination_group.group(
+        name="autoreview", aliases=("ar",), invoke_without_command=True, with_app_command=False
+    )
     @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def nomination_autoreview_group(self, ctx: Context) -> None:
         """Commands for enabling or disabling autoreview."""
         await ctx.send_help(ctx.command)
 
-    @nomination_autoreview_group.command(name="enable", aliases=("on",))
+    @nomination_autoreview_group.command(name="enable", aliases=("on",), with_app_command=False)
     @has_any_role(Roles.admins, Roles.founders)
     @commands.max_concurrency(1)
     async def autoreview_enable(self, ctx: Context) -> None:
@@ -166,7 +180,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await ctx.send(":white_check_mark: Autoreview enabled.")
 
-    @nomination_autoreview_group.command(name="disable", aliases=("off",))
+    @nomination_autoreview_group.command(name="disable", aliases=("off",), with_app_command=False)
     @has_any_role(Roles.admins, Roles.founders)
     @commands.max_concurrency(1)
     async def autoreview_disable(self, ctx: Context) -> None:
@@ -182,7 +196,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
         await ctx.send(":white_check_mark: Autoreview disabled.")
 
-    @nomination_autoreview_group.command(name="status")
+    @nomination_autoreview_group.command(name="status", with_app_command=False)
     @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def autoreview_status(self, ctx: Context) -> None:
         """Show whether automatic posting of reviews is enabled or disabled."""
@@ -190,6 +204,26 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send("Autoreview is currently enabled.")
         else:
             await ctx.send("Autoreview is currently disabled.")
+
+    @nomination_group.command(name="autoreview-set")
+    @app_commands.describe(enabled="Whether automatic posting of reviews should be enabled")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @has_any_role(Roles.admins, Roles.founders)
+    @commands.max_concurrency(1)
+    async def autoreview_set_slash(self, ctx: Context, enabled: bool) -> None:
+        """Enable or disable automatic posting of reviews."""
+        if enabled:
+            await self.autoreview_enable(ctx)
+        else:
+            await self.autoreview_disable(ctx)
+
+    @nomination_group.command(name="autoreview-status")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    async def autoreview_status_slash(self, ctx: Context) -> None:
+        """Show whether automatic posting of reviews is enabled or disabled."""
+        await self.autoreview_status(ctx)
 
     @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
@@ -241,10 +275,13 @@ class TalentPool(Cog, name="Talentpool"):
                 end_reason=f"Automatic removal: User was inactive for more than {DAYS_UNTIL_INACTIVE}"
             )
 
+    # Slash commands can only be nested one level deep, so the `list` subcommands are prefix only.
+    # They are available as the flat `list-grouped`, `list-oldest` and `list-newest` slash commands below.
     @nomination_group.group(
         name="list",
         aliases=("nominated", "nominees"),
-        invoke_without_command=True
+        invoke_without_command=True,
+        with_app_command=False,
     )
     @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def list_group(
@@ -263,15 +300,36 @@ class TalentPool(Cog, name="Talentpool"):
         """
         await self.show_nominations_list(ctx, grouped_view=True)
 
-    @list_group.command(name="oldest")
+    @list_group.command(name="oldest", with_app_command=False)
     async def list_oldest(self, ctx: Context) -> None:
         """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
         await self.show_nominations_list(ctx, oldest_first=True)
 
-    @list_group.command(name="newest")
+    @list_group.command(name="newest", with_app_command=False)
     async def list_newest(self, ctx: Context) -> None:
         """Shows the users that are currently in the talent pool, ordered by newest nomination."""
         await self.show_nominations_list(ctx, oldest_first=False)
+
+    @nomination_group.command(name="list-grouped")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    async def list_grouped_slash(self, ctx: Context) -> None:
+        """Shows the users that are currently in the talent pool, grouped by review status."""
+        await self.list_group(ctx)
+
+    @nomination_group.command(name="list-oldest")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    async def list_oldest_slash(self, ctx: Context) -> None:
+        """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
+        await self.list_oldest(ctx)
+
+    @nomination_group.command(name="list-newest")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    async def list_newest_slash(self, ctx: Context) -> None:
+        """Shows the users that are currently in the talent pool, ordered by newest nomination."""
+        await self.list_newest(ctx)
 
     async def show_nominations_list(
         self,
@@ -289,6 +347,7 @@ class TalentPool(Cog, name="Talentpool"):
         Otherwise, nominations will be sorted by age
         (ordered based on the value of `oldest_first`).
         """
+        await ctx.defer()
         now = datetime.now(tz=UTC)
         nominations = await self.api.get_nominations(active=True)
         messages_per_user = await self.api.get_activity(
@@ -399,6 +458,7 @@ class TalentPool(Cog, name="Talentpool"):
         root_aliases=("forcenominate",)
     )
     @has_any_role(*MODERATION_ROLES)
+    @app_commands.describe(user="The user to nominate", reason="Why the user is being nominated (optional)")
     async def force_nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
         Adds the given `user` to the talent pool, from any channel.
@@ -413,6 +473,7 @@ class TalentPool(Cog, name="Talentpool"):
         root_aliases=("nominate", "nom")
     )
     @has_any_role(*STAFF_ROLES)
+    @app_commands.describe(user="The user to nominate", reason="Why the user is being nominated (optional)")
     async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
         Adds the given `user` to the talent pool.
@@ -424,7 +485,7 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    f"Use `{BotConfig.prefix}tp forcenominate` to override this check."
+                    f"Use `/talentpool forcenominate` to override this check."
                 )
             else:
                 await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel.")
@@ -525,6 +586,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def _nominate_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """Adds the given user to the talent pool."""
+        await ctx.defer()
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. Only humans can be nominated.")
             return
@@ -562,11 +624,13 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name="history", aliases=("info", "search"))
     @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @app_commands.describe(user="The user to show the nomination history of")
     async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
-        result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
+        await ctx.defer()
+        lines = await self._get_nomination_history(user)
 
-        if not result:
+        if not lines:
             await ctx.send(f":warning: {user.mention} has never been nominated.")
             return
 
@@ -574,7 +638,6 @@ class TalentPool(Cog, name="Talentpool"):
             title=f"Nominations for {user.display_name} `({user.id})`",
             color=Color.blue()
         )
-        lines = [await self._nomination_to_string(nomination) for nomination in result]
         await LinePaginator.paginate(
             lines,
             ctx=ctx,
@@ -585,14 +648,58 @@ class TalentPool(Cog, name="Talentpool"):
             allowed_roles=MODERATION_ROLES,
         )
 
+    async def _get_nomination_history(self, user: MemberOrUser) -> list[str]:
+        """Return the lines describing each nomination of the user, with the active one first."""
+        result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
+        return [await self._nomination_to_string(nomination) for nomination in result]
+
+    @app_commands.guild_only()
+    async def _history_menu_callback(self, interaction: discord.Interaction, user: Member | User) -> None:
+        """Show the nomination history of the user, as `talentpool history` does."""
+        # Gated in the same way as the `talentpool history` command.
+        ctx = await authorise_command(interaction, "talentpool history")
+        # The command paginates with reactions, which can't be added to an ephemeral message.
+        await ctx.defer(ephemeral=True)
+
+        lines = await self._get_nomination_history(user)
+        if not lines:
+            await ctx.send(f":warning: {user.mention} has never been nominated.")
+            return
+
+        title = f"Nominations for {user.display_name} `({user.id})`"
+        for page in self._history_pages(lines):
+            await ctx.send(embed=Embed(title=title, description=page, color=Color.blue()))
+            # Only the first message can be the deferred response, the rest are ephemeral followups.
+            title = "Nominations (continued)"
+
+    @staticmethod
+    def _history_pages(lines: list[str]) -> list[str]:
+        """Join `lines` into pages that fit in the description of an embed."""
+        pages = []
+        current = ""
+        for line in lines:
+            # A single nomination can be longer than a page.
+            chunks = [line[i:i + HISTORY_PAGE_SIZE] for i in range(0, len(line), HISTORY_PAGE_SIZE)] or [""]
+            for chunk in chunks:
+                if current and len(current) + len(chunk) + 2 > HISTORY_PAGE_SIZE:
+                    pages.append(current)
+                    current = chunk
+                else:
+                    current = f"{current}\n\n{chunk}" if current else chunk
+        if current:
+            pages.append(current)
+        return pages
+
     @nomination_group.command(name="end", aliases=("unwatch", "unnominate"), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @app_commands.describe(user="The user whose nomination to end", reason="Why the nomination is being ended")
     async def end_nomination_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 
         Providing a `reason` is required.
         """
+        await ctx.defer()
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
@@ -602,18 +709,20 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send(f":x: {user.mention} doesn't have an active nomination.")
 
-    @nomination_group.group(name="append", aliases=("amend",), invoke_without_command=True)
+    # Slash commands can only be nested one level deep, so the `append` and `edit` subcommands are prefix only.
+    # They are available as the flat `append-reason`, `edit-reason` and `edit-end-reason` slash commands below.
+    @nomination_group.group(name="append", aliases=("amend",), invoke_without_command=True, with_app_command=False)
     @has_any_role(*STAFF_ROLES)
     async def nomination_append_group(self, ctx: Context) -> None:
         """Commands to append additional text to nominations."""
         await ctx.send_help(ctx.command)
 
-    @nomination_append_group.command(name="reason")
+    @nomination_append_group.command(name="reason", with_app_command=False)
     @has_any_role(*STAFF_ROLES)
     async def append_reason_command(
         self,
         ctx: Context,
-        nominee_or_nomination_id: UnambiguousMemberOrUser | int,
+        nominee_or_nomination_id: NomineeOrNominationID,
         nominator: UnambiguousMemberOrUser | None = None,
         *,
         reason: str
@@ -631,6 +740,7 @@ class TalentPool(Cog, name="Talentpool"):
         Raise a permission error if a non-mod staff member invokes this command on a
         specific nomination ID, or with an nominator other than themselves.
         """
+        await ctx.defer()
         # If not specified, assume the invoker is editing their own nomination reason.
         nominator = nominator or ctx.author
 
@@ -684,18 +794,35 @@ class TalentPool(Cog, name="Talentpool"):
             reason=reason
         )
 
-    @nomination_group.group(name="edit", aliases=("e",), invoke_without_command=True)
+    @nomination_group.command(name="append-reason")
+    @has_any_role(*STAFF_ROLES)
+    @app_commands.describe(
+        nominee_or_nomination_id="The nominee, or the ID of the nomination to append to",
+        reason="The text to append to the nomination reason",
+        nominator="The nominator whose reason to append to. Defaults to you",
+    )
+    async def append_reason_slash(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: NomineeOrNominationID,
+        reason: str,
+        nominator: UnambiguousMemberOrUser | None = None,
+    ) -> None:
+        """Append additional text to the nomination reason of a specific nominator for a given nomination."""
+        await self.append_reason_command(ctx, nominee_or_nomination_id, nominator, reason=reason)
+
+    @nomination_group.group(name="edit", aliases=("e",), invoke_without_command=True, with_app_command=False)
     @has_any_role(*STAFF_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
         await ctx.send_help(ctx.command)
 
-    @nomination_edit_group.command(name="reason")
+    @nomination_edit_group.command(name="reason", with_app_command=False)
     @has_any_role(*STAFF_ROLES)
     async def edit_reason_command(
         self,
         ctx: Context,
-        nominee_or_nomination_id: UnambiguousMemberOrUser | int,
+        nominee_or_nomination_id: NomineeOrNominationID,
         nominator: UnambiguousMemberOrUser | None = None,
         *,
         reason: str
@@ -712,6 +839,7 @@ class TalentPool(Cog, name="Talentpool"):
         Raise a permission error if a non-mod staff member invokes this command on a
         specific nomination ID, or with an nominator other than themselves.
         """
+        await ctx.defer()
         # If not specified, assume the invoker is editing their own nomination reason.
         nominator = nominator or ctx.author
 
@@ -777,10 +905,11 @@ class TalentPool(Cog, name="Talentpool"):
 
         await self.maybe_relay_update(nomination.user_id, thread_update)
 
-    @nomination_edit_group.command(name="end_reason")
+    @nomination_edit_group.command(name="end_reason", with_app_command=False)
     @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
+        await ctx.defer()
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
@@ -800,10 +929,37 @@ class TalentPool(Cog, name="Talentpool"):
 
         await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination.user_id}>.")
 
+    @nomination_group.command(name="edit-reason")
+    @has_any_role(*STAFF_ROLES)
+    @app_commands.describe(
+        nominee_or_nomination_id="The nominee, or the ID of the nomination to edit",
+        reason="The new nomination reason",
+        nominator="The nominator whose reason to edit. Defaults to you",
+    )
+    async def edit_reason_slash(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: NomineeOrNominationID,
+        reason: str,
+        nominator: UnambiguousMemberOrUser | None = None,
+    ) -> None:
+        """Edit the nomination reason of a specific nominator for a given nomination."""
+        await self.edit_reason_command(ctx, nominee_or_nomination_id, nominator, reason=reason)
+
+    @nomination_group.command(name="edit-end-reason")
+    @has_any_role(*STAFF_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @app_commands.describe(nomination_id="The ID of the nomination to edit", reason="The new unnominate reason")
+    async def edit_end_reason_slash(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
+        """Edits the unnominate reason for the nomination with the given ID."""
+        await self.edit_end_reason_command(ctx, nomination_id, reason=reason)
+
     @nomination_group.command(aliases=("gr",))
     @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @app_commands.describe(user_id="The ID of the user to get the review of")
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
+        await ctx.defer()
         nominations = await self.api.get_nominations(user_id, active=True)
         if not nominations:
             await ctx.send(f":x: There doesn't appear to be an active nomination for {user_id}")
@@ -818,8 +974,10 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(aliases=("review",))
     @has_any_role(*MODERATION_ROLES, Roles.founders)
+    @app_commands.describe(user_id="The ID of the user to post the review of")
     async def post_review(self, ctx: Context, user_id: int) -> None:
         """Post the automatic review for the user ahead of time."""
+        await ctx.defer()
         nominations = await self.api.get_nominations(user_id, active=True)
         if not nominations:
             await ctx.send(f":x: There doesn't appear to be an active nomination for {user_id}")
@@ -831,7 +989,10 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         await self.reviewer.post_review(nomination)
-        await ctx.message.add_reaction(Emojis.check_mark)
+        if ctx.interaction is not None:
+            await ctx.send(Emojis.check_mark)
+        else:
+            await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
@@ -949,4 +1110,9 @@ class TalentPool(Cog, name="Talentpool"):
             self.nominate_user_context_menu.name,
             guild=discord.Object(Guild.id),
             type=self.nominate_user_context_menu.type
+        )
+        self.bot.tree.remove_command(
+            self.history_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.history_menu.type
         )

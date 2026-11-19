@@ -1,6 +1,7 @@
 
 import discord
 import sentry_sdk
+from discord import app_commands
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
@@ -9,6 +10,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
@@ -91,15 +93,17 @@ class ThreadBumper(commands.Cog):
             if threads_to_maybe_bump:
                 await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
 
-    @commands.group(name="bump")
+    @hybrid_group(name="bump")
     async def thread_bump_group(self, ctx: commands.Context) -> None:
         """A group of commands to manage the bumping of threads."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
     @thread_bump_group.command(name="add", aliases=("a",))
+    @app_commands.describe(thread="The thread to add, or the current thread if omitted")
     async def add_thread_to_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Add a thread to the bump list."""
+        await ctx.defer()
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -113,8 +117,10 @@ class ThreadBumper(commands.Cog):
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
+    @app_commands.describe(thread="The thread to remove, or the current thread if omitted")
     async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Remove a thread from the bump list."""
+        await ctx.defer()
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -130,6 +136,7 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="list", aliases=("get",))
     async def list_all_threads_in_bump_list(self, ctx: commands.Context) -> None:
         """List all the threads in the bump list."""
+        await ctx.defer()
         lines = [f"<#{thread_id}>" for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT)]
         embed = discord.Embed(
             title="Threads in the bump list",

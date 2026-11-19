@@ -1,10 +1,21 @@
 import itertools
 import re
 from collections import namedtuple
+from collections.abc import Callable, Iterable
 from contextlib import suppress
+from typing import Any
 
-from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
-from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
+from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, app_commands, ui
+from discord.ext.commands import (
+    Bot,
+    Cog,
+    Command,
+    CommandError,
+    Context,
+    DisabledCommand,
+    Group,
+    HybridGroup,
+)
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 
@@ -13,12 +24,13 @@ from bot.constants import Channels, STAFF_AND_COMMUNITY_ROLES
 from bot.decorators import redirect_output
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
 
 COMMANDS_PER_PAGE = 8
-PREFIX = constants.Bot.prefix
+MAX_AUTOCOMPLETE_CHOICES = 25
 
 NOT_ALLOWED_TO_RUN_MESSAGE = "***You cannot run this command.***\n\n"
 
@@ -34,7 +46,7 @@ class SubcommandButton(ui.Button):
 
     def __init__(
         self,
-        help_command: CustomHelpCommand,
+        formatter: HelpFormatter,
         command: Command,
         *,
         style: ButtonStyle = ButtonStyle.primary,
@@ -49,16 +61,16 @@ class SubcommandButton(ui.Button):
             style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
         )
 
-        self.help_command = help_command
+        self.formatter = formatter
         self.command = command
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the subcommand."""
         subcommand = self.command
         if isinstance(subcommand, Group):
-            embed, subcommand_view = await self.help_command.format_group_help(subcommand)
+            embed, subcommand_view = await self.formatter.format_group_help(subcommand)
         else:
-            embed, subcommand_view = await self.help_command.command_formatting(subcommand)
+            embed, subcommand_view = await self.formatter.command_formatting(subcommand)
 
         await interaction.response.edit_message(embed=embed, view=subcommand_view)
 
@@ -72,7 +84,7 @@ class GroupButton(ui.Button):
 
     def __init__(
         self,
-        help_command: CustomHelpCommand,
+        formatter: HelpFormatter,
         command: Command,
         *,
         style: ButtonStyle = ButtonStyle.secondary,
@@ -87,12 +99,12 @@ class GroupButton(ui.Button):
             style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
         )
 
-        self.help_command = help_command
+        self.formatter = formatter
         self.command = command
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the parent."""
-        embed, group_view = await self.help_command.format_group_help(self.command.parent)
+        embed, group_view = await self.formatter.format_group_help(self.command.parent)
         await interaction.response.edit_message(embed=embed, view=group_view)
 
 
@@ -103,12 +115,12 @@ class CommandView(ui.View):
     If the command has a parent, a button is added to the view to show that parent's help embed.
     """
 
-    def __init__(self, help_command: CustomHelpCommand, command: Command, context: Context):
+    def __init__(self, formatter: HelpFormatter, command: Command, context: Context):
         self.context = context
         super().__init__()
 
         if command.parent:
-            self.add_item(GroupButton(help_command, command, emoji="↩️"))
+            self.add_item(GroupButton(formatter, command, emoji="↩️"))
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         """
@@ -136,15 +148,15 @@ class GroupView(CommandView):
     MAX_BUTTONS_IN_ROW = 5
     MAX_ROWS = 5
 
-    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command], context: Context):
-        super().__init__(help_command, group, context)
+    def __init__(self, formatter: HelpFormatter, group: Group, subcommands: list[Command], context: Context):
+        super().__init__(formatter, group, context)
         # Don't add buttons if only a portion of the subcommands can be shown.
         if len(subcommands) + len(self.children) > self.MAX_ROWS * self.MAX_BUTTONS_IN_ROW:
             log.trace(f"Attempted to add navigation buttons for `{group.qualified_name}`, but there was no space.")
             return
 
         for subcommand in subcommands:
-            self.add_item(SubcommandButton(help_command, subcommand, label=subcommand.name))
+            self.add_item(SubcommandButton(formatter, subcommand, label=subcommand.name))
 
 
 class HelpQueryNotFoundError(ValueError):
@@ -162,9 +174,9 @@ class HelpQueryNotFoundError(ValueError):
         self.possible_matches = possible_matches
 
 
-class CustomHelpCommand(HelpCommand):
+class HelpFormatter:
     """
-    An interactive instance for the bot help command.
+    Builds and sends the bot's help output.
 
     Cogs can be grouped into custom categories. All cogs with the same category will be displayed
     under a single category name in the help output. Custom categories are defined inside the cogs
@@ -173,38 +185,100 @@ class CustomHelpCommand(HelpCommand):
     the regular description (class docstring) of the first cog found in the category.
     """
 
-    def __init__(self):
-        super().__init__(command_attrs={"help": "Shows help for bot commands"})
+    def __init__(self, context: Context | None = None):
+        self.context = context
 
-    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_AND_COMMUNITY_ROLES)
-    async def command_callback(self, ctx: Context, *, command: str | None = None) -> None:
-        """Attempts to match the provided query with a valid command or cog."""
-        # the only reason we need to tamper with this is because d.py does not support "categories",
-        # so we need to deal with them ourselves.
+    def get_bot_mapping(self) -> dict[Cog | None, list[Command]]:
+        """Get a mapping of cogs (or None) to the commands they hold."""
+        bot = self.context.bot
+        mapping = {cog: cog.get_commands() for cog in bot.cogs.values()}
+        mapping[None] = [command for command in bot.commands if command.cog is None]
+        return mapping
 
-        bot = ctx.bot
+    async def filter_commands(
+        self,
+        commands_: Iterable[Command],
+        *,
+        sort: bool = False,
+        key: Callable[[Command], Any] | None = None,
+    ) -> list[Command]:
+        """Remove hidden commands and those the invoker can't run, optionally sorting (by name by default)."""
+        if sort and key is None:
+            key = lambda c: c.name
 
-        if command is None:
-            # quick and easy, send bot help if command is none
-            mapping = self.get_bot_mapping()
-            await self.send_bot_help(mapping)
-            return
+        filtered = []
+        for command in commands_:
+            if command.hidden:
+                continue
+            try:
+                if await command.can_run(self.context):
+                    filtered.append(command)
+            except CommandError:
+                continue
+
+        if sort:
+            filtered.sort(key=key)
+        return filtered
+
+    def get_usage(self, command: Command) -> str:
+        """
+        Get the usage line of a command, without any markdown.
+
+        Commands which have an application command are shown as slash commands, anything else
+        can only be used by mentioning the bot.
+        """
+        signature = f" {command.signature}" if command.signature else ""
+
+        if getattr(command, "app_command", None) is not None:
+            name = command.qualified_name
+            if isinstance(command, HybridGroup) and command.fallback:
+                name += f" {command.fallback}"
+            return f"/{name}{signature}"
+
+        return f"@{self.context.me.display_name} {command.qualified_name}{signature}"
+
+    def resolve(self, query: str) -> Category | Cog | Command | None:
+        """
+        Find the category, cog, group, command or subcommand a query refers to.
+
+        Categories are checked first, then cogs, then commands (including aliases and subcommands).
+        """
+        bot = self.context.bot
+        query = query.strip().removeprefix("/")
 
         cog_matches = []
         description = None
         for cog in bot.cogs.values():
-            if hasattr(cog, "category") and cog.category == command:
+            if getattr(cog, "category", None) == query:
                 cog_matches.append(cog)
                 if hasattr(cog, "category_description"):
                     description = cog.category_description
 
         if cog_matches:
-            category = Category(name=command, description=description, cogs=cog_matches)
-            await self.send_category_help(category)
+            return Category(name=query, description=description, cogs=cog_matches)
+
+        if cog := bot.get_cog(query):
+            return cog
+
+        return bot.get_command(query)
+
+    async def send_help_for(self, query: str | None) -> None:
+        """Send the help matching the query, or the general help if there is no query."""
+        if query is None:
+            await self.send_bot_help(self.get_bot_mapping())
             return
 
-        # it's either a cog, group, command or subcommand; let the parent class deal with it
-        await super().command_callback(ctx, command=command)
+        match self.resolve(query):
+            case None:
+                await self.send_error_message(await self.command_not_found(query))
+            case Category() as category:
+                await self.send_category_help(category)
+            case Cog() as cog:
+                await self.send_cog_help(cog)
+            case Group() as group:
+                await self.send_group_help(group)
+            case command:
+                await self.send_command_help(command)
 
     async def get_all_help_choices(self) -> set:
         """
@@ -256,14 +330,6 @@ class CustomHelpCommand(HelpCommand):
 
         return HelpQueryNotFoundError(f'Query "{query}" not found.', {choice[0]: choice[1] for choice in result})
 
-    async def subcommand_not_found(self, command: Command, string: str) -> HelpQueryNotFoundError:
-        """
-        Redirects the error to `command_not_found`.
-
-        `command_not_found` deals with searching and getting best choices for both commands and subcommands.
-        """
-        return await self.command_not_found(f"{command.qualified_name} {string}")
-
     async def send_error_message(self, error: HelpQueryNotFoundError) -> None:
         """Send the error message to the channel."""
         embed = Embed(colour=Colour.red(), title=str(error))
@@ -285,15 +351,14 @@ class CustomHelpCommand(HelpCommand):
 
         parent = command.full_parent_name
 
-        name = str(command) if not parent else f"{parent} {command.name}"
-        command_details = f"**```{PREFIX}{name} {command.signature}```**\n"
+        command_details = f"**```{self.get_usage(command)}```**\n"
 
         # show command aliases
         aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
         aliases += [f"`{alias}`" for alias in getattr(command, "root_aliases", ())]
         aliases = ", ".join(sorted(aliases))
         if aliases:
-            command_details += f"**Can also use:** {aliases}\n\n"
+            command_details += f"**Can also use (when mentioning the bot):** {aliases}\n\n"
 
         # when command is disabled, show message about it,
         # when other CommandError or user is not allowed to run command,
@@ -322,19 +387,15 @@ class CustomHelpCommand(HelpCommand):
         message = await self.context.send(embed=embed, view=view)
         await wait_for_deletion(message, (self.context.author.id,))
 
-    @staticmethod
-    def get_commands_brief_details(commands_: list[Command], return_as_list: bool = False) -> list[str] | str:
+    def get_commands_brief_details(self, commands_: list[Command], return_as_list: bool = False) -> list[str] | str:
         """
-        Formats the prefix, command name and signature, and short doc for an iterable of commands.
+        Formats the usage (command name and signature), and short doc for an iterable of commands.
 
         return_as_list is helpful for passing these command details into the paginator as a list of command details.
         """
         details = []
         for command in commands_:
-            signature = f" {command.signature}" if command.signature else ""
-            details.append(
-                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n{command.short_doc or 'No details provided'}"
-            )
+            details.append(f"\n**`{self.get_usage(command)}`**\n{command.short_doc or 'No details provided'}")
         if return_as_list:
             return details
         return "".join(details)
@@ -473,18 +534,67 @@ class CustomHelpCommand(HelpCommand):
         await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2000)
 
 
+def get_autocomplete_choices(choices: Iterable[str], current: str) -> list[str]:
+    """
+    Select the help choices to suggest for the text typed so far.
+
+    Choices containing the text come first (those starting with it before the others), followed by close fuzzy matches.
+    """
+    choices = sorted(choices)
+    current = current.strip().removeprefix("/").lower()
+    if not current:
+        return choices[:MAX_AUTOCOMPLETE_CHOICES]
+
+    contained = [choice for choice in choices if current in choice.lower()]
+    contained.sort(key=lambda choice: (not choice.lower().startswith(current), len(choice), choice))
+    selected = contained[:MAX_AUTOCOMPLETE_CHOICES]
+
+    remaining = MAX_AUTOCOMPLETE_CHOICES - len(selected)
+    if remaining:
+        others = [choice for choice in choices if choice not in selected]
+        fuzzy = process.extract(
+            current, others, scorer=fuzz.ratio, score_cutoff=60, limit=remaining, processor=default_process
+        )
+        selected.extend(choice for choice, *_ in fuzzy)
+
+    return selected
+
+
 class Help(Cog):
     """Custom Embed Pagination Help feature."""
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.formatter = HelpFormatter()
         self.old_help_command = bot.help_command
-        bot.help_command = CustomHelpCommand()
-        bot.help_command.cog = self
+        bot.help_command = None
 
     async def cog_unload(self) -> None:
         """Reset the help command when the cog is unloaded."""
         self.bot.help_command = self.old_help_command
+
+    @hybrid_command(name="help")
+    @app_commands.describe(query="A command, group, cog or category to get help for. Leave empty for all commands")
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_AND_COMMUNITY_ROLES)
+    async def help_command(self, ctx: Context, *, query: str | None = None) -> None:
+        """Shows help for bot commands."""
+        self.formatter.context = ctx
+        await self.formatter.send_help_for(query)
+
+    @help_command.autocomplete("query")
+    async def query_autocomplete(self, interaction: Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """Suggest the commands, cogs and categories which the invoker can get help for."""
+        try:
+            ctx = await Context.from_interaction(interaction)
+            choices = await HelpFormatter(ctx).get_all_help_choices()
+        except Exception:
+            log.exception("Failed to build the help autocomplete choices")
+            return []
+
+        return [
+            app_commands.Choice(name=choice[:100], value=choice[:100])
+            for choice in get_autocomplete_choices(choices, current)
+        ]
 
 
 async def setup(bot: Bot) -> None:

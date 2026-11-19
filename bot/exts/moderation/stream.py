@@ -5,6 +5,7 @@ import arrow
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
+from discord import app_commands
 from discord.ext import commands
 from pydis_core.utils import scheduling
 from pydis_core.utils.members import get_or_fetch_member
@@ -23,6 +24,7 @@ from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -89,7 +91,11 @@ class Stream(commands.Cog):
 
         log.debug("No stream found to suspend from %s (%s).", member, member.id)
 
-    @commands.command(aliases=("streaming",))
+    @hybrid_group(aliases=("streaming",), fallback="grant")
+    @app_commands.describe(
+        member="The member to grant the streaming permission to",
+        duration="How long the permission lasts, e.g. 1h, or an ISO 8601 timestamp. Defaults to the usual duration",
+    )
     @commands.has_any_role(*MODERATION_ROLES)
     async def stream(
         self,
@@ -112,6 +118,7 @@ class Stream(commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """  # noqa: RUF002
+        await ctx.defer()
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
 
         if duration is None:
@@ -146,10 +153,12 @@ class Stream(commands.Cog):
             "to stream for %s (until %s).",
         member, member.id, humanized_duration, end_time)
 
-    @commands.command(aliases=("pstream",))
+    @stream.command(name="permanent", root_aliases=("permanentstream", "pstream"))
+    @app_commands.describe(member="The member to permanently grant the streaming permission to")
     @commands.has_any_role(*MODERATION_ROLES)
     async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Permanently grants the given member the permission to stream."""
+        await ctx.defer()
         log.trace(f"Attempting to give permanent streaming permission to {member} ({member.id}).")
 
         # Check if the member already has streaming permission
@@ -173,10 +182,12 @@ class Stream(commands.Cog):
         await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
         log.debug("Successfully gave %s (%s) permanent streaming permission.", member, member.id)
 
-    @commands.command(aliases=("unstream", "rstream"))
+    @stream.command(name="revoke", root_aliases=("revokestream", "unstream", "rstream"))
+    @app_commands.describe(member="The member to revoke the streaming permission from")
     @commands.has_any_role(*MODERATION_ROLES)
     async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Revoke the permission to stream from the given member."""
+        await ctx.defer()
         log.trace(f"Attempting to remove streaming permission from {member} ({member.id}).")
 
         # Check if the member already has streaming permission
@@ -196,10 +207,11 @@ class Stream(commands.Cog):
 
         await self._suspend_stream(ctx, member)
 
-    @commands.command(aliases=("lstream",))
+    @stream.command(name="list", root_aliases=("liststream", "lstream"))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
         """Lists all users who aren't staff or members of the python community and have stream permissions."""
+        await ctx.defer()
         non_staff_or_community_members_with_stream = [
             member
             for member in ctx.guild.get_role(Roles.video).members

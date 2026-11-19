@@ -342,3 +342,53 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             None,
             reason=f"[Clean log]({self.log_url})"
         )
+
+
+@patch("bot.exts.moderation.infraction._scheduler.send_log_message", new_callable=AsyncMock)
+@patch("bot.exts.moderation.infraction._utils.notify_infraction", new_callable=AsyncMock)
+class ApplyInfractionConfirmationTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the confirmation sent when an infraction is applied."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.bot.api_client.get = AsyncMock(return_value=[])
+        self.cog = Infractions(self.bot)
+        self.user = MockMember(id=1234)
+        self.ctx = MockContext(bot=self.bot, author=MockMember(id=99))
+        self.infraction = {
+            "id": 1,
+            "type": "warning",
+            "reason": "rude",
+            "hidden": False,
+            "actor": 99,
+            "jump_url": None,
+            "expires_at": None,
+            "last_applied": "2026-01-01T00:00:00+00:00",
+        }
+
+    async def _apply(self, in_mod_channel: bool) -> None:
+        with patch("bot.exts.moderation.infraction._scheduler.is_mod_channel", return_value=in_mod_channel):
+            await self.cog.apply_infraction(self.ctx, self.infraction, self.user)
+
+    async def test_embed_is_attached_in_mod_channels(self, notify, send_log):
+        notify.return_value = True
+
+        await self._apply(in_mod_channel=True)
+
+        embed = self.ctx.send.call_args.kwargs["embed"]
+        self.assertEqual(embed.description, "rude")
+
+    async def test_embed_is_not_attached_elsewhere(self, notify, send_log):
+        notify.return_value = True
+
+        await self._apply(in_mod_channel=False)
+
+        self.assertNotIn("embed", self.ctx.send.call_args.kwargs)
+
+    async def test_embed_is_not_attached_when_applying_failed(self, notify, send_log):
+        notify.return_value = False
+        self.ctx.channel.permissions_for.return_value.view_channel = False
+
+        await self._apply(in_mod_channel=True)
+
+        self.assertNotIn("embed", self.ctx.send.call_args.kwargs)

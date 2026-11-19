@@ -2,21 +2,21 @@ import enum
 import inspect
 from pathlib import Path
 
-from discord import Embed
+from discord import Embed, app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.exts.info.tags import TagIdentifier
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import send_or_reply
 
-SourceObject = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
+SourceObject = commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
 
 class SourceType(enum.StrEnum):
     """The types of source objects recognized by the source command."""
 
-    help_command = enum.auto()
     command = enum.auto()
     cog = enum.auto()
     tag = enum.auto()
@@ -29,7 +29,8 @@ class BotSource(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="source", aliases=("src",))
+    @hybrid_command(name="source", aliases=("src",))
+    @app_commands.describe(source_item="The name of a command, tag or cog. Leave empty for the repository link")
     async def source_command(
         self,
         ctx: commands.Context,
@@ -53,9 +54,6 @@ class BotSource(commands.Cog):
     @staticmethod
     async def get_source_object(ctx: commands.Context, argument: str) -> tuple[SourceObject, SourceType]:
         """Convert argument into the source object and source type."""
-        if argument.lower() == "help":
-            return ctx.bot.help_command, SourceType.help_command
-
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog, SourceType.cog
@@ -125,10 +123,7 @@ class BotSource(commands.Cog):
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object, source_type)
 
-        if source_type == SourceType.help_command:
-            title = "Help Command"
-            description = source_object.__doc__.splitlines()[1]
-        elif source_type == SourceType.command:
+        if source_type == SourceType.command:
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
         elif source_type == SourceType.tag:

@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import functools
 import types
 import typing as t
@@ -125,6 +126,11 @@ def redirect_output(
 
     If ping_user is False, it will not send a message in the destination channel.
 
+    For slash commands there is no invocation message to paste or delete, and an interaction's responses can only
+    be sent to the channel it was invoked in. So the command is run with a copy of the context that is detached
+    from the interaction and sends to the destination channel, and the user is told where to find the output with
+    an ephemeral response.
+
     This decorator must go before (below) the `command` decorator.
     """
     def wrap(func: types.FunctionType) -> types.FunctionType:
@@ -152,6 +158,12 @@ def redirect_output(
 
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
+
+            if ctx.interaction:
+                await _redirect_interaction_output(
+                    func, self, ctx, redirect_channel, ping_user, *args, **kwargs
+                )
+                return
 
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
@@ -208,6 +220,33 @@ def redirect_output(
     return wrap
 
 
+async def _redirect_interaction_output(
+    func: types.FunctionType,
+    cog: Cog,
+    ctx: Context,
+    redirect_channel: discord.abc.Messageable,
+    ping_user: bool,
+    *args,
+    **kwargs,
+) -> None:
+    """Run `func` with its output sent to `redirect_channel`, for a command invoked as a slash command."""
+    # Acknowledge the interaction, the command may take a while and sends nothing to the invoking channel.
+    await ctx.defer(ephemeral=True)
+
+    # A context that is no longer tied to the interaction sends plain messages to its channel.
+    redirected_ctx = copy.copy(ctx)
+    redirected_ctx.interaction = None
+    redirected_ctx.channel = redirect_channel
+
+    msg = "Here's the output of your command"
+    msg += f", {ctx.author.mention}:" if ping_user else ":"
+    await redirect_channel.send(msg)
+
+    scheduling.create_task(func(cog, redirected_ctx, *args, **kwargs))
+
+    await ctx.send(f"You can find the output of your command here: {redirect_channel.mention}", ephemeral=True)
+
+
 def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
@@ -243,7 +282,8 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 actor, actor.id, cmd, target, target.id)
                 await ctx.send(
                     f":x: {actor.mention}, you may not {cmd} "
-                    "someone with an equal or higher top role."
+                    "someone with an equal or higher top role.",
+                    ephemeral=True,
                 )
                 return None
 
@@ -297,7 +337,7 @@ def ensure_future_timestamp(timestamp_arg: function.Argument) -> t.Callable:
             except TypeError:
                 is_future = True
             if not is_future:
-                await ctx.send(":x: Provided timestamp is in the past.")
+                await ctx.send(":x: Provided timestamp is in the past.", ephemeral=True)
                 return None
 
             return await func(*args, **kwargs)

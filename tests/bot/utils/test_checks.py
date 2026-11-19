@@ -1,7 +1,9 @@
 import unittest
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from discord import DMChannel
+from discord.ext.commands import BucketType, Command, CommandOnCooldown
 
 from bot.utils import checks
 from bot.utils.checks import InWhitelistCheckFailure
@@ -92,3 +94,33 @@ class ChecksTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.channel.category_id = 3
         self.ctx.channel.id = 5
         self.assertTrue(checks.in_whitelist_check(self.ctx, channels=[1], categories=[8], roles=[2]))
+
+
+class CooldownWithRoleBypassTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for `cooldown_with_role_bypass` with the synthetic message of a slash command."""
+
+    async def test_cooldown_uses_message_author_and_timestamp(self):
+        """A second use by the same author inside the window should be rate limited."""
+        ctx = MockContext(interaction=MagicMock())
+        ctx.author.roles = []
+        ctx.message.created_at = datetime.now(UTC)
+
+        command = MagicMock(spec=Command)
+        checks.cooldown_with_role_bypass(1, 60, BucketType.user, bypass_roles=(1,))(command)
+        predicate = command._before_invoke
+
+        await predicate(None, ctx)
+        with self.assertRaises(CommandOnCooldown):
+            await predicate(None, ctx)
+
+    async def test_bypass_role_is_not_rate_limited(self):
+        """Members with a bypass role should never be rate limited."""
+        ctx = MockContext(interaction=MagicMock())
+        ctx.author.roles = [MockRole(id=1)]
+        ctx.message.created_at = datetime.now(UTC)
+
+        command = MagicMock(spec=Command)
+        checks.cooldown_with_role_bypass(1, 60, BucketType.user, bypass_roles=(1,))(command)
+
+        await command._before_invoke(None, ctx)
+        await command._before_invoke(None, ctx)

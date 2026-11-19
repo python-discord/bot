@@ -24,7 +24,7 @@ NEW_POST_MSG = """
 
 :warning: Do not pip install anything that isn't related to your question, especially if asked to over DMs.
 """
-NEW_POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+NEW_POST_FOOTER = "Closes after a period of inactivity, or when you send /help-forum close."
 NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
 CLOSED_POST_MSG = f"""
@@ -52,7 +52,7 @@ async def _close_help_post(
     if closing_reason == _stats.ClosingReason.CLEANUP:
         close_title += " as OP left server"
     elif closing_reason == _stats.ClosingReason.COMMAND:
-        close_title += f" with {constants.Bot.prefix}close"
+        close_title += " with the close command"
     elif closing_reason == _stats.ClosingReason.INACTIVE:
         close_title += " for inactivity"
     elif closing_reason == _stats.ClosingReason.NATIVE:

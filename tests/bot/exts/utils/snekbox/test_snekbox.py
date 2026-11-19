@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, pat
 
 from discord import AllowedMentions
 from discord.ext import commands
+from discord.ext.commands.view import StringView
 from pydis_core.utils.paste_service import MAX_PASTE_SIZE
 
 from bot import constants
@@ -459,7 +460,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""
-        prefix = constants.Bot.prefix
+        prefix = "<@1> "
         subtests = (
             (self.cog.eval_command, f"{prefix}{self.cog.eval_command.name} print(1)", "print(1)"),
             (self.cog.eval_command, f"{prefix}{self.cog.eval_command.name}", None),
@@ -475,7 +476,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
             with self.subTest(content=content, expected_code=expected_code):
                 self.bot.get_context.reset_mock()
-                self.bot.get_context.return_value = MockContext(command=command)
+                context = MockContext(command=command)
+                if command is self.cog.eval_command:
+                    context.view = StringView(content)
+                    context.view.skip_string(prefix)
+                    context.view.get_word()
+                self.bot.get_context.return_value = context
                 message = MockMessage(content=content)
 
                 actual_code = await self.cog.get_code(message, self.cog.eval_command)

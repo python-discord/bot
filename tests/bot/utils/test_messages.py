@@ -1,6 +1,10 @@
 import unittest
+import unittest.mock
+
+import discord
 
 from bot.utils import messages
+from tests import helpers
 
 
 class TestMessages(unittest.TestCase):
@@ -26,3 +30,31 @@ class TestMessages(unittest.TestCase):
         for username_in, username_out in test_cases:
             with self.subTest(input=username_in, expected_output=username_out):
                 self.assertEqual(messages.sub_clyde(username_in), username_out)
+
+
+class TestWaitForDeletion(unittest.IsolatedAsyncioTestCase):
+    """Tests for `wait_for_deletion`."""
+
+    def setUp(self):
+        patcher = unittest.mock.patch("bot.utils.messages.bot")
+        self.bot = patcher.start().instance
+        self.bot.wait_for = unittest.mock.AsyncMock()
+        self.addCleanup(patcher.stop)
+
+    async def test_slash_followup_without_guild_is_allowed(self):
+        """A slash command followup has no guild info but is in a channel of unknown type, so it can be deleted."""
+        message = helpers.MockMessage(guild=None, channel=helpers.MockTextChannel(type=None))
+        message.add_reaction = unittest.mock.AsyncMock()
+        message.delete = unittest.mock.AsyncMock()
+
+        await messages.wait_for_deletion(message, (1,))
+
+        message.add_reaction.assert_awaited_once()
+        message.delete.assert_awaited_once()
+
+    async def test_private_channel_is_rejected(self):
+        """Messages in DMs can't be made deletable."""
+        message = helpers.MockMessage(guild=None, channel=helpers.MockDMChannel(type=discord.ChannelType.private))
+
+        with self.assertRaises(ValueError):
+            await messages.wait_for_deletion(message, (1,))

@@ -8,7 +8,7 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot.constants import Colours, Icons
 from bot.exts.moderation.infraction import _utils as utils
-from tests.helpers import MockBot, MockContext, MockMember, MockUser
+from tests.helpers import MockBot, MockContext, MockInteraction, MockMember, MockUser
 
 
 class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
@@ -380,3 +380,93 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(payload, payload | expected)
 
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
+
+
+class SlashCommandHelperTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the helpers which support commands invoked as slash commands."""
+
+    def setUp(self):
+        self.interaction = MockInteraction()
+        self.interaction.response.is_done = MagicMock(return_value=False)
+        self.interaction.original_response = AsyncMock()
+        self.slash_ctx = MockContext(interaction=self.interaction)
+        self.slash_ctx.defer = AsyncMock()
+
+    async def test_defer_once_defers_unresponded_slash_command(self):
+        """A slash command which hasn't responded should be deferred."""
+        await utils.defer_once(self.slash_ctx)
+        self.slash_ctx.defer.assert_awaited_once_with()
+
+    async def test_defer_once_ignores_responded_slash_command(self):
+        """A slash command which was already deferred by a calling command should not be deferred again."""
+        self.interaction.response.is_done.return_value = True
+        await utils.defer_once(self.slash_ctx)
+        self.slash_ctx.defer.assert_not_called()
+
+    async def test_defer_once_prefix_command(self):
+        """A prefix command should be handed to `ctx.defer`, which does nothing for it."""
+        ctx = MockContext(interaction=None)
+        ctx.defer = AsyncMock()
+        await utils.defer_once(ctx)
+        ctx.defer.assert_awaited_once_with()
+
+    async def test_jump_url_of_prefix_command_is_the_invocation_message(self):
+        """The jump URL of a prefix command is that of the message which invoked it."""
+        ctx = MockContext(interaction=None)
+        self.assertEqual(ctx.message.jump_url, await utils.get_invocation_jump_url(ctx))
+
+    async def test_jump_url_of_slash_command_is_the_response(self):
+        """The jump URL of a slash command is that of the response to the interaction."""
+        self.interaction.original_response.return_value.jump_url = "https://discord.com/channels/1/2/3"
+        self.assertEqual("https://discord.com/channels/1/2/3", await utils.get_invocation_jump_url(self.slash_ctx))
+
+    async def test_jump_url_of_slash_command_without_response(self):
+        """There is no jump URL if the response to a slash command can't be fetched."""
+        self.interaction.original_response.side_effect = NotFound(MagicMock(status=404), "Unknown Webhook")
+        self.assertIsNone(await utils.get_invocation_jump_url(self.slash_ctx))
+
+
+class BuildInfractionEmbedTests(unittest.TestCase):
+    """Tests for the embed echoing back an applied infraction."""
+
+    def setUp(self):
+        self.user = MockMember(id=1, mention="<@1>")
+        self.actor = MockMember(id=2, mention="<@2>")
+
+    def _infraction(self, **kwargs):
+        infraction = {
+            "id": 42,
+            "type": "ban",
+            "reason": "spamming",
+            "expires_at": None,
+            "last_applied": "2026-01-01T00:00:00+00:00",
+        }
+        return infraction | kwargs
+
+    def test_embed_echoes_the_infraction(self):
+        embed = utils.build_infraction_embed(self._infraction(), self.user, self.actor)
+
+        self.assertEqual(embed.title, "Ban applied")
+        self.assertEqual(embed.description, "spamming")
+        self.assertEqual(embed.footer.text, "ID: 42")
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Member"], "<@1>")
+        self.assertEqual(fields["Actor"], "<@2>")
+        self.assertEqual(fields["Expires"], "Never")
+
+    def test_infractions_without_expiry_have_no_expires_field(self):
+        for infr_type in ("kick", "note", "warning"):
+            with self.subTest(type=infr_type):
+                embed = utils.build_infraction_embed(self._infraction(type=infr_type), self.user, self.actor)
+
+                self.assertNotIn("Expires", [field.name for field in embed.fields])
+
+    def test_underscores_are_removed_from_the_type(self):
+        embed = utils.build_infraction_embed(self._infraction(type="voice_mute"), self.user, self.actor)
+
+        self.assertEqual(embed.title, "Voice Mute applied")
+
+    def test_missing_reason(self):
+        embed = utils.build_infraction_embed(self._infraction(reason=None), self.user, self.actor)
+
+        self.assertEqual(embed.description, "No reason provided.")

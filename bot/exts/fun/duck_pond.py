@@ -1,14 +1,15 @@
 import asyncio
 
 import discord
-from discord import Color, Embed, Message, RawReactionActionEvent, errors
-from discord.ext.commands import Cog, Context, command
+from discord import Color, Embed, Message, RawReactionActionEvent, app_commands, errors
+from discord.ext.commands import Cog, Context
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import MemberOrUser
 from bot.log import get_logger
 from bot.utils.checks import has_any_role
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
 
@@ -201,11 +202,18 @@ class DuckPond(Cog):
             if duck_count >= constants.DuckPond.threshold:
                 await message.add_reaction("✅")
 
-    @command(name="duckify", aliases=("duckpond", "pondify"))
+    @hybrid_command(name="duckify", aliases=("duckpond", "pondify"))
+    @app_commands.describe(message="A link to the message to relay")
     @has_any_role(constants.Roles.admins)
     async def duckify(self, ctx: Context, message: Message) -> None:
         """Relay a message to the duckpond, no ducks required!"""
-        if await self.locked_relay(message):
+        await ctx.defer(ephemeral=True)
+        relayed = await self.locked_relay(message)
+        if ctx.interaction is not None:
+            # There is no invocation message to react to.
+            result = "🦆 Relayed the message to the duck pond." if relayed else "❌ Could not relay the message."
+            await ctx.send(result, ephemeral=True)
+        elif relayed:
             await ctx.message.add_reaction("🦆")
         else:
             await ctx.message.add_reaction("❌")

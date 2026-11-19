@@ -97,6 +97,30 @@ async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
         await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
 
 
+async def defer_once(ctx: Context) -> None:
+    """Defer a slash command, unless it was already responded to or deferred by a command which invoked this one."""
+    if ctx.interaction is None or not ctx.interaction.response.is_done():
+        await ctx.defer()
+
+
+async def get_invocation_jump_url(ctx: Context) -> str | None:
+    """
+    Get a jump URL to the message which invoked the command in `ctx`, if there is one.
+
+    For slash commands the closest equivalent is the response to the interaction. That is only available if the
+    interaction was already deferred or responded to, so the command should do that before calling this.
+    """
+    # A `FakeContext` has no interaction attribute.
+    interaction = getattr(ctx, "interaction", None)
+    if interaction is None:
+        return ctx.message.jump_url if ctx.message is not None else None
+
+    try:
+        return (await interaction.original_response()).jump_url
+    except discord.HTTPException:
+        return None
+
+
 async def post_infraction(
     ctx: Context,
     user: MemberOrUser,
@@ -119,10 +143,10 @@ async def post_infraction(
     if any(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ) or ctx.message is None:
+    ):
         jump_url = None
     else:
-        jump_url = ctx.message.jump_url
+        jump_url = await get_invocation_jump_url(ctx)
 
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
@@ -197,6 +221,26 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
         f":x: According to my records, this user already has a {infraction['type']} infraction. "
         f"See infraction **#{infraction['id']}**."
     )
+
+
+def build_infraction_embed(infraction: Infraction, user: MemberOrUser, actor: MemberOrUser) -> discord.Embed:
+    """Build an embed echoing back an applied infraction, for the confirmation sent in mod channels."""
+    infr_type = infraction["type"].replace("_", " ")
+    embed = discord.Embed(
+        title=f"{infr_type.title()} applied",
+        description=infraction["reason"] or "No reason provided.",
+        colour=Colours.soft_red,
+    )
+    embed.set_author(name=str(user), icon_url=user.display_avatar.url)
+    embed.add_field(name="Member", value=user.mention)
+    embed.add_field(name="Actor", value=actor.mention)
+
+    if infraction["type"] not in ("kick", "note", "warning"):
+        expiry = time.format_with_duration(infraction["expires_at"], infraction["last_applied"])
+        embed.add_field(name="Expires", value=expiry or "Never")
+
+    embed.set_footer(text=f"ID: {infraction['id']}")
+    return embed
 
 
 async def notify_infraction(

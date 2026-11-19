@@ -1,12 +1,21 @@
 import re
 import unittest
 from datetime import MAXYEAR, UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument
+from discord.ext.commands import BadArgument, BadUnionArgument
 
-from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName
+from bot.converters import (
+    Duration,
+    DurationOrExpiry,
+    Expiry,
+    HushDurationConverter,
+    ISODateTime,
+    NomineeOrNominationID,
+    PackageName,
+    UserOrMessage,
+)
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -252,3 +261,71 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
                 self.assertRaisesRegex(BadArgument, re.escape(exception_message)),
             ):
                 await converter.convert(self.context, invalid_minutes_string)
+
+    async def test_expiry_converts_duration_and_datetime(self):
+        """Expiry accepts both a duration string and an ISO-8601 datetime string."""
+        converter = Expiry()
+        in_the_future = await converter.convert(self.context, "1d")
+        self.assertGreater(in_the_future, datetime.now(UTC))
+
+        parsed = await converter.convert(self.context, "2030-01-01")
+        self.assertEqual(datetime(2030, 1, 1, tzinfo=UTC), parsed)
+
+    async def test_duration_or_expiry_converts_to_delta_or_datetime(self):
+        """DurationOrExpiry returns a relativedelta for durations and a datetime for ISO-8601 strings."""
+        converter = DurationOrExpiry()
+        self.assertEqual(relativedelta(days=1), await converter.convert(self.context, "1d"))
+        self.assertEqual(datetime(2030, 1, 1, tzinfo=UTC), await converter.convert(self.context, "2030-01-01"))
+
+    async def test_union_converter_raises_bad_union_argument(self):
+        """A union converter raises BadUnionArgument containing every converter's error when none succeed."""
+        context = MagicMock()
+        with self.assertRaises(BadUnionArgument) as cm:
+            await Expiry().convert(context, "not a time")
+
+        self.assertEqual(2, len(cm.exception.errors))
+
+    async def test_nominee_or_nomination_id_converts_small_numbers_to_int(self):
+        """NomineeOrNominationID falls back to an int when the argument is not a user mention or ID."""
+        self.assertEqual(42, await NomineeOrNominationID().convert(self.context, "42"))
+
+    async def test_nominee_or_nomination_id_rejects_other_arguments(self):
+        """NomineeOrNominationID raises BadUnionArgument when the argument is neither a user nor an integer."""
+        with self.assertRaises(BadUnionArgument) as cm:
+            await NomineeOrNominationID().convert(MagicMock(), "not a user")
+
+        self.assertEqual(3, len(cm.exception.errors))
+
+    async def test_user_or_message_converts_a_message_link_to_a_message(self):
+        """UserOrMessage converts a message link to the message, not trying to find a user."""
+        message = MagicMock()
+        link = "https://discord.com/channels/1/2/3"
+        with (
+            patch("bot.converters.MessageConverter.convert", new=AsyncMock(return_value=message)),
+            patch("bot.converters.MemberConverter.convert", new=AsyncMock()) as member_convert,
+        ):
+            self.assertIs(message, await UserOrMessage().convert(self.context, link))
+
+        member_convert.assert_not_called()
+
+    async def test_user_or_message_converts_a_bare_id_to_a_user(self):
+        """UserOrMessage does not treat a bare ID as a message, as it is more likely to be a user's."""
+        member = MagicMock()
+        with (
+            patch("bot.converters.MessageConverter.convert", new=AsyncMock()) as message_convert,
+            patch("bot.converters.MemberConverter.convert", new=AsyncMock(return_value=member)),
+        ):
+            self.assertIs(member, await UserOrMessage().convert(self.context, "123456789012345678"))
+
+        message_convert.assert_not_called()
+
+    async def test_user_or_message_rejects_other_arguments(self):
+        """UserOrMessage raises BadUnionArgument when the argument is neither a message link nor a user."""
+        with (
+            patch("bot.converters.MemberConverter.convert", new=AsyncMock(side_effect=BadArgument("no"))),
+            patch("bot.converters.UserConverter.convert", new=AsyncMock(side_effect=BadArgument("no"))),
+            self.assertRaises(BadUnionArgument) as cm,
+        ):
+            await UserOrMessage().convert(MagicMock(), "not a user")
+
+        self.assertEqual(3, len(cm.exception.errors))

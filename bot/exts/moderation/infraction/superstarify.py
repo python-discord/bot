@@ -3,8 +3,8 @@ import random
 import textwrap
 from pathlib import Path
 
-from discord import Embed, Member
-from discord.ext.commands import Cog, Context, command, has_any_role
+from discord import Embed, Member, app_commands
+from discord.ext.commands import Cog, Context, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.utils.members import get_or_fetch_member
 
@@ -16,6 +16,7 @@ from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.hybrid import hybrid_command
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -103,13 +104,18 @@ class Superstarify(InfractionScheduler, Cog):
                 )
             await self.reapply_infraction(infraction, action)
 
-    @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @hybrid_command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @app_commands.describe(
+        member="The member to superstarify",
+        duration="How long the nickname is forced for, e.g. 1h, or an ISO 8601 timestamp. Defaults to 1h",
+        reason="Why the member is being superstarified, shown to them alongside the nickname policy",
+    )
     @ensure_future_timestamp(timestamp_arg=3)
     async def superstarify(
         self,
         ctx: Context,
         member: Member,
-        duration: DurationOrExpiry | None,
+        duration: DurationOrExpiry | None = None,
         *,
         reason: str = "",
     ) -> None:
@@ -131,6 +137,7 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided, which would be added to a message stating their old nickname
         and linking to the nickname policy.
         """  # noqa: RUF002
+        await ctx.defer()
         if member.top_role >= ctx.me.top_role:
             await ctx.send(":x: I can't starify users above or equal to me in the role hierarchy.")
             return
@@ -190,9 +197,11 @@ class Superstarify(InfractionScheduler, Cog):
             )
             await ctx.send(embed=embed)
 
-    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify", "unsuperstar"))
+    @hybrid_command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify", "unsuperstar"))
+    @app_commands.describe(member="The member to remove the superstarify infraction from")
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
+        await ctx.defer()
         await self.pardon_infraction(ctx, "superstar", member)
 
     async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> dict[str, str] | None:

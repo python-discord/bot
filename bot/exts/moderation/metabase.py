@@ -8,7 +8,8 @@ import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord import app_commands
+from discord.ext.commands import Cog, Context, has_any_role
 from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 from pydis_core.utils.scheduling import Scheduler
 
@@ -16,6 +17,7 @@ from bot.bot import Bot
 from bot.constants import BaseURLs, Metabase as MetabaseConfig, Roles
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -98,12 +100,13 @@ class Metabase(Cog):
 
         self._session_scheduler.schedule_at(refresh_time, 0, self.refresh_session())
 
-    @group(name="metabase", invoke_without_command=True)
+    @hybrid_group(name="metabase", invoke_without_command=True)
     async def metabase_group(self, ctx: Context) -> None:
         """A group of commands for interacting with metabase."""
         await ctx.send_help(ctx.command)
 
     @metabase_group.command(name="extract", aliases=("export",))
+    @app_commands.describe(question_id="The ID of the metabase question", extension="The format to extract the data as")
     async def metabase_extract(
         self,
         ctx: Context,
@@ -162,6 +165,7 @@ class Metabase(Cog):
         )
 
     @metabase_group.command(name="publish", aliases=("share",))
+    @app_commands.describe(question_id="The ID of the metabase question to share")
     async def metabase_publish(self, ctx: Context, question_id: int) -> None:
         """Publically shares the given question and posts the link."""
         await ctx.typing()

@@ -1,11 +1,13 @@
 import discord
-from discord.ext.commands import Cog, Context, command, has_any_role
+from discord import app_commands
+from discord.ext.commands import Cog, Context, has_any_role
 from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
 from bot.constants import BaseURLs, Emojis, MODERATION_ROLES
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
+from bot.utils.hybrid import hybrid_command
 
 log = get_logger(__name__)
 
@@ -16,9 +18,11 @@ class DMRelay(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(aliases=("relay", "dr"))
+    @hybrid_command(aliases=("relay", "dr"))
+    @app_commands.describe(user="The user to relay the direct message history of", limit="How many messages to relay")
     async def dmrelay(self, ctx: Context, user: discord.User, limit: int = 100) -> None:
         """Relays the direct message history between the bot and given user."""
+        await ctx.defer()
         log.trace(f"Relaying DMs with {user.name} ({user.id})")
 
         if user.bot:

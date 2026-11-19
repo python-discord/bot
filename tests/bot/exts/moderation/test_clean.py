@@ -1,8 +1,22 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from bot.exts.moderation.clean import Clean
-from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockMessage, MockRole, MockTextChannel
+import discord
+
+from bot.constants import MODERATION_ROLES, Roles
+from bot.exts.moderation.clean import Clean, CleanUntilConfirmationView
+from bot.utils.context_menus import ContextMenuDenied
+from tests.helpers import (
+    MockBot,
+    MockContext,
+    MockGuild,
+    MockInteraction,
+    MockMember,
+    MockMessage,
+    MockRole,
+    MockTextChannel,
+    make_menu_interaction,
+)
 
 
 class CleanTests(unittest.IsolatedAsyncioTestCase):
@@ -41,6 +55,43 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog._delete_invocation(self.ctx))
 
         self.ctx.message.delete.assert_not_awaited()
+
+    @patch("bot.exts.moderation.clean.is_mod_channel")
+    async def test_clean_doesnt_delete_invocation_of_slash_command(self, mod_channel_check):
+        """A slash command has no invocation message to delete."""
+        mod_channel_check.return_value = False
+        self.ctx.interaction = MockInteraction()
+        self.ctx.message.delete = AsyncMock()
+
+        self.assertIsNone(await self.cog._delete_invocation(self.ctx))
+
+        self.ctx.message.delete.assert_not_awaited()
+
+    @patch("bot.exts.moderation.clean.is_mod_channel")
+    async def test_defer_is_ephemeral_outside_mod_channels(self, mod_channel_check):
+        """A slash command is deferred ephemerally outside of mod channels, and is otherwise visible."""
+        self.ctx.interaction = MockInteraction()
+        self.ctx.interaction.response.is_done = MagicMock(return_value=False)
+        self.ctx.defer = AsyncMock()
+
+        for is_mod_channel, ephemeral in ((True, False), (False, True)):
+            with self.subTest(is_mod_channel=is_mod_channel):
+                mod_channel_check.return_value = is_mod_channel
+                self.ctx.defer.reset_mock()
+
+                await self.cog._defer(self.ctx)
+
+                self.ctx.defer.assert_awaited_once_with(ephemeral=ephemeral)
+
+    async def test_defer_ignores_responded_interaction(self):
+        """An interaction which was already deferred by the invoking command should not be deferred again."""
+        self.ctx.interaction = MockInteraction()
+        self.ctx.interaction.response.is_done = MagicMock(return_value=True)
+        self.ctx.defer = AsyncMock()
+
+        await self.cog._defer(self.ctx)
+
+        self.ctx.defer.assert_not_awaited()
 
     async def test_clean_doesnt_attempt_deletion_when_attempt_delete_invocation_is_false(self):
         """Clean command should not attempt to delete the invocation message if attempt_delete_invocation is false."""
@@ -102,3 +153,77 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
         sent_message = mocked_mods.send.await_args[0][0]
         self.assertIn(self.log_url, sent_message)
         self.assertIn("2 messages", sent_message)
+
+
+class CleanUntilMenuTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the Clean until here message context menu."""
+
+    def setUp(self):
+        self.cog = Clean(MockBot())
+        # Commands only have their cog set once the cog is added to a bot.
+        self.command = self.cog.clean_group.get_command("until")
+        self.command.cog = self.cog
+        self.message = MockMessage()
+
+    def test_menu_is_guild_only_message_menu(self):
+        menu = self.cog.clean_until_menu
+        self.assertEqual(menu.type, discord.AppCommandType.message)
+        self.assertTrue(menu.guild_only)
+
+    async def test_moderator_is_asked_to_confirm(self):
+        interaction, _ = make_menu_interaction(self.command, role_ids=(MODERATION_ROLES[0],))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        await self.cog._clean_until_menu_callback(interaction, self.message)
+
+        interaction.response.send_message.assert_awaited_once()
+        kwargs = interaction.response.send_message.await_args.kwargs
+        self.assertTrue(kwargs["ephemeral"])
+        self.assertIsInstance(kwargs["view"], CleanUntilConfirmationView)
+
+    async def test_non_moderator_is_denied(self):
+        interaction, _ = make_menu_interaction(self.command, role_ids=(Roles.helpers,))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        with self.assertRaises(ContextMenuDenied):
+            await self.cog._clean_until_menu_callback(interaction, self.message)
+
+        interaction.response.send_message.assert_not_called()
+
+    async def test_confirming_cleans_until_the_message(self):
+        ctx = MockContext()
+        self.cog._clean_messages = AsyncMock()
+        view = CleanUntilConfirmationView(self.cog, ctx, self.message)
+        interaction = MockInteraction()
+        interaction.response = MagicMock(edit_message=AsyncMock())
+
+        await view.confirm.callback(interaction)
+
+        self.cog._clean_messages.assert_awaited_once_with(ctx, channels=None, first_limit=self.message)
+
+    async def test_cancelling_does_not_clean(self):
+        self.cog._clean_messages = AsyncMock()
+        view = CleanUntilConfirmationView(self.cog, MockContext(), self.message)
+        interaction = MockInteraction()
+        interaction.response = MagicMock(edit_message=AsyncMock())
+
+        await view.cancel.callback(interaction)
+
+        self.cog._clean_messages.assert_not_called()
+
+    async def test_only_the_invoker_may_confirm(self):
+        ctx = MockContext()
+        view = CleanUntilConfirmationView(self.cog, ctx, self.message)
+        interaction = MockInteraction(user=MockMember(id=ctx.author.id + 1))
+        interaction.response = MagicMock(send_message=AsyncMock())
+
+        self.assertFalse(await view.interaction_check(interaction))
+
+    async def test_error_while_cleaning_releases_the_lock(self):
+        self.cog._clean_messages = AsyncMock(side_effect=RuntimeError)
+        self.cog.cleaning = True
+
+        with self.assertRaises(RuntimeError):
+            await self.cog.clean_until_from_menu(MockContext(), self.message)
+
+        self.assertFalse(self.cog.cleaning)

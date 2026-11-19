@@ -9,17 +9,21 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Literal, TYPE_CHECKING
 
-from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
-from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
-from discord.ext.commands.converter import TextChannelConverter
+import discord
+from discord import Colour, Interaction, Message, NotFound, TextChannel, Thread, User, app_commands, errors
+from discord.ext.commands import Cog, Context, Converter, Greedy, has_any_role
+from discord.ext.commands.converter import MessageConverter, TextChannelConverter
 from discord.ext.commands.errors import BadArgument
+from pydis_core.utils.interactions import ViewWithUserAndRoleCheck
 
 from bot.bot import Bot
-from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
-from bot.converters import Age, ISODateTime
+from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Guild, Icons, MODERATION_ROLES
+from bot.converters import Age, ISODateTime, UnionConverter
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
+from bot.utils.context_menus import authorise_command, context_menu_error_handler
+from bot.utils.hybrid import hybrid_command, hybrid_group
 from bot.utils.messages import upload_log
 from bot.utils.modlog import send_log_message
 
@@ -30,8 +34,6 @@ MESSAGE_DELETE_DELAY = 5
 
 # Type alias for checks for whether a message should be deleted.
 Predicate = Callable[[Message], bool]
-# Type alias for message lookup ranges.
-CleanLimit = Message | Age | ISODateTime
 
 
 class CleanChannels(Converter):
@@ -60,9 +62,50 @@ class Regex(Converter):
             raise BadArgument(f"Regex error: {e.msg}")
 
 
+class CleanLimit(UnionConverter):
+    """A converter for message lookup ranges: a message, a duration delta, or an ISO 8601 datetime."""
+
+    converters = (MessageConverter, Age, ISODateTime)
+
+
+class PurgeAge(UnionConverter):
+    """A converter for the age of messages to purge: a duration or an ISO 8601 datetime."""
+
+    converters = (Age, ISODateTime)
+
+
 if TYPE_CHECKING:  # Used to allow method resolution in IDEs like in converters.py.
     CleanChannels = Literal["*"] | list[TextChannel]
     Regex = re.Pattern
+    CleanLimit = Message | datetime
+    PurgeAge = datetime
+
+
+class CleanUntilConfirmationView(ViewWithUserAndRoleCheck):
+    """An ephemeral confirmation, as the context menu makes it easy to start cleaning a channel by accident."""
+
+    def __init__(self, cog: Clean, ctx: Context, message: Message):
+        super().__init__(allowed_users=(ctx.author.id,), allowed_roles=(), timeout=60)
+        self.cog = cog
+        self.ctx = ctx
+        self.message = message
+
+    @discord.ui.button(label="Clean", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Start cleaning, responding to the original menu interaction from here on."""
+        self.stop()
+        await interaction.response.edit_message(content="Cleaning...", view=None)
+        await self.cog.clean_until_from_menu(self.ctx, self.message)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Do not clean anything."""
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled.", view=None)
+
+    async def on_error(self, interaction: Interaction, error: Exception, item: discord.ui.Item) -> None:
+        """Handle any exceptions in the callbacks of the view."""
+        await context_menu_error_handler(interaction, error)
 
 
 class Clean(Cog):
@@ -79,6 +122,24 @@ class Clean(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.cleaning = False
+
+        self.clean_until_menu = app_commands.ContextMenu(
+            name="Clean until here", callback=self._clean_until_menu_callback
+        )
+        self.clean_until_menu.default_permissions = discord.Permissions.none()
+        self.clean_until_menu.error(context_menu_error_handler)
+
+    async def cog_load(self) -> None:
+        """Add the context menu to the command tree."""
+        self.bot.tree.add_command(self.clean_until_menu, guild=discord.Object(Guild.id))
+
+    async def cog_unload(self) -> None:
+        """Remove the context menu from the command tree."""
+        self.bot.tree.remove_command(
+            self.clean_until_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.clean_until_menu.type,
+        )
 
     @property
     def mod_log(self) -> ModLog:
@@ -209,6 +270,10 @@ class Clean(Cog):
 
     async def _delete_invocation(self, ctx: Context) -> None:
         """Delete the command invocation if it's not in a mod channel."""
+        if ctx.interaction is not None:
+            # There is no invocation message for a slash command.
+            return
+
         if not is_mod_channel(ctx.channel):
             self.mod_log.ignore(Event.message_delete, ctx.message.id)
             try:
@@ -382,6 +447,17 @@ class Clean(Cog):
 
     # endregion
 
+    @staticmethod
+    async def _defer(ctx: Context) -> None:
+        """
+        Defer a slash command, unless it was already responded to or deferred by a command which invoked this one.
+
+        The response is only visible to the invoker outside of mod channels, as the invocation of a prefix command
+        is deleted there and the result is sent to the mods channel.
+        """
+        if ctx.interaction is not None and not ctx.interaction.response.is_done():
+            await ctx.defer(ephemeral=not is_mod_channel(ctx.channel))
+
     async def _clean_messages(
         self,
         ctx: Context,
@@ -436,6 +512,8 @@ class Clean(Cog):
 
         if not self.cleaning:
             # Means that the cleaning was canceled
+            if ctx.interaction is not None and attempt_delete_invocation:
+                await ctx.send(f"{Emojis.check_mark} Clean interrupted.", ephemeral=True)
             return None
 
         # Now let's delete the actual messages with purge.
@@ -459,11 +537,23 @@ class Clean(Cog):
         elif log_url:
             if mods := self.bot.get_channel(Channels.mods):
                 await mods.send(f"{ctx.author.mention} {success_message}")
+
+        if ctx.interaction is not None and attempt_delete_invocation and not (log_url and is_mod_channel(ctx.channel)):
+            # Respond to the slash command, only the invoker sees this outside of mod channels.
+            await ctx.send(success_message, ephemeral=True)
         return log_url
 
     # region: Commands
 
-    @group(invoke_without_command=True, name="clean", aliases=("clear",))
+    @hybrid_group(invoke_without_command=True, name="clean", aliases=("clear",), fallback="messages")
+    @app_commands.describe(
+        users="Users whose messages to delete, as mentions or IDs separated by spaces",
+        first_limit="A message to stop at, a duration for the max message age, or an ISO 8601 datetime",
+        second_limit="A second limit, to clean between the two limits",
+        regex="A regex pattern messages must match to be deleted, enclosed in backticks",
+        bots_only="Whether to only delete messages by bots",
+        channels="Channels to delete in, separated by spaces, or * for all public channels",
+    )
     async def clean_group(
         self,
         ctx: Context,
@@ -495,9 +585,15 @@ class Clean(Cog):
             await ctx.send_help(ctx.command)
             return
 
+        await self._defer(ctx)
         await self._clean_messages(ctx, channels, bots_only, users, regex, first_limit, second_limit)
 
     @clean_group.command(name="users", aliases=["user"])
+    @app_commands.describe(
+        users="Users whose messages to delete, as mentions or IDs separated by spaces",
+        message_or_time="A message to stop at, a duration for the max message age, or an ISO 8601 datetime",
+        channels="Channels to delete in, separated by spaces, or * for all public channels",
+    )
     async def clean_users(
         self,
         ctx: Context,
@@ -517,9 +613,14 @@ class Clean(Cog):
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
         An asterisk can also be used to designate cleanup across all channels.
         """
+        await self._defer(ctx)
         await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
+    @app_commands.describe(
+        message_or_time="A message to stop at, a duration for the max message age, or an ISO 8601 datetime",
+        channels="Channels to delete in, separated by spaces, or * for all public channels",
+    )
     async def clean_bots(
         self,
         ctx: Context,
@@ -538,9 +639,15 @@ class Clean(Cog):
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
         An asterisk can also be used to designate cleanup across all channels.
         """
+        await self._defer(ctx)
         await self._clean_messages(ctx, bots_only=True, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
+    @app_commands.describe(
+        regex="A regex pattern messages must match to be deleted, enclosed in backticks",
+        message_or_time="A message to stop at, a duration for the max message age, or an ISO 8601 datetime",
+        channels="Channels to delete in, separated by spaces, or * for all public channels",
+    )
     async def clean_regex(
         self,
         ctx: Context,
@@ -568,9 +675,14 @@ class Clean(Cog):
 
         For example: "\\`[0-9]\\`".
         """
+        await self._defer(ctx)
         await self._clean_messages(ctx, regex=regex, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="until")
+    @app_commands.describe(
+        until="A message to stop at, a duration for the max message age, or an ISO 8601 datetime",
+        channel="The channel to delete in. Defaults to the current channel",
+    )
     async def clean_until(
         self,
         ctx: Context,
@@ -589,13 +701,38 @@ class Clean(Cog):
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
         An asterisk can also be used to designate cleanup across all channels.
         """
+        await self._defer(ctx)
         await self._clean_messages(
             ctx,
             channels=[channel] if channel else None,
             first_limit=until,
         )
 
+    @app_commands.guild_only()
+    async def _clean_until_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """Ask for confirmation to delete all messages after the selected message, as `clean until` does."""
+        # Gated in the same way as the `clean until` command.
+        ctx = await authorise_command(interaction, "clean until")
+        await interaction.response.send_message(
+            f"Delete all messages in this channel after {message.jump_url}?",
+            view=CleanUntilConfirmationView(self, ctx, message),
+            ephemeral=True,
+        )
+
+    async def clean_until_from_menu(self, ctx: Context, message: Message) -> None:
+        """Run `clean until` for the message selected in the context menu."""
+        try:
+            await self._clean_messages(ctx, channels=None, first_limit=message)
+        except Exception:
+            self.cleaning = False
+            raise
+
     @clean_group.command(name="between", aliases=["after-until", "from-to"])
+    @app_commands.describe(
+        first_limit="A message, a duration for the max message age, or an ISO 8601 datetime",
+        second_limit="A second message, duration or ISO 8601 datetime",
+        channel="The channel to delete in. Defaults to the current channel",
+    )
     async def clean_between(
         self,
         ctx: Context,
@@ -617,6 +754,7 @@ class Clean(Cog):
         If two timedeltas or ISO datetimes are specified, `channels` can be specified to clean across multiple channels.
         An asterisk can also be used to designate cleanup across all channels.
         """
+        await self._defer(ctx)
         await self._clean_messages(
             ctx,
             channels=[channel] if channel else None,
@@ -636,8 +774,12 @@ class Clean(Cog):
         await self._send_expiring_message(ctx, message)
         await self._delete_invocation(ctx)
 
-    @command()
-    async def purge(self, ctx: Context, users: Greedy[User], age: Age | ISODateTime | None = None) -> None:
+    @hybrid_command(description="Clean messages of users from all public channels up to a certain message age.")
+    @app_commands.describe(
+        users="Users whose messages to delete, as mentions or IDs separated by spaces",
+        age="How old messages can be, as a duration, or an ISO 8601 datetime. Defaults to 10 minutes",
+    )
+    async def purge(self, ctx: Context, users: Greedy[User], age: PurgeAge | None = None) -> None:
         """
         Clean messages of `users` from all public channels up to a certain message `age` (10 minutes by default).
 
@@ -651,6 +793,7 @@ class Clean(Cog):
         if age is None:
             age = await Age().convert(ctx, "10M")
 
+        await self._defer(ctx)
         await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
 
     # endregion

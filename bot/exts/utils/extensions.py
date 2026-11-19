@@ -1,9 +1,9 @@
 import typing as t
 from enum import Enum, member
 
-from discord import Colour, Embed
+from discord import Colour, Embed, app_commands
 from discord.ext import commands
-from discord.ext.commands import Context, group
+from discord.ext.commands import Context
 
 from bot import exts
 from bot.bot import Bot
@@ -11,6 +11,7 @@ from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.converters import Extension
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -34,18 +35,20 @@ class Extensions(commands.Cog):
         self.bot = bot
         self.action_in_progress = False
 
-    @group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
+    @hybrid_group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
     async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list loaded extensions."""
         await ctx.send_help(ctx.command)
 
     @extensions_group.command(name="load", aliases=("l",))
-    async def load_command(self, ctx: Context, *extensions: Extension) -> None:
+    @app_commands.describe(extensions="The extensions to load, separated by spaces. Use * to load all unloaded ones")
+    async def load_command(self, ctx: Context, *, extensions: str) -> None:
         r"""
         Load extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all unloaded extensions will be loaded.
         """
+        extensions = await self.convert_extensions(ctx, extensions)
         if not extensions:
             await ctx.send_help(ctx.command)
             return
@@ -56,12 +59,14 @@ class Extensions(commands.Cog):
         await self.batch_manage(Action.LOAD, ctx, *extensions)
 
     @extensions_group.command(name="unload", aliases=("ul",))
-    async def unload_command(self, ctx: Context, *extensions: Extension) -> None:
+    @app_commands.describe(extensions="The extensions to unload, separated by spaces. Use * to unload all")
+    async def unload_command(self, ctx: Context, *, extensions: str) -> None:
         r"""
         Unload currently loaded extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all loaded extensions will be unloaded.
         """
+        extensions = await self.convert_extensions(ctx, extensions)
         if not extensions:
             await ctx.send_help(ctx.command)
             return
@@ -77,7 +82,8 @@ class Extensions(commands.Cog):
             await self.batch_manage(Action.UNLOAD, ctx, *extensions)
 
     @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
-    async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
+    @app_commands.describe(extensions="The extensions to reload, separated by spaces. Use * or ** to reload many")
+    async def reload_command(self, ctx: Context, *, extensions: str) -> None:
         r"""
         Reload extensions given their fully qualified or unqualified names.
 
@@ -86,6 +92,7 @@ class Extensions(commands.Cog):
         If '\*' is given as the name, all currently loaded extensions will be reloaded.
         If '\*\*' is given as the name, all extensions, including unloaded ones, will be reloaded.
         """
+        extensions = await self.convert_extensions(ctx, extensions)
         if not extensions:
             await ctx.send_help(ctx.command)
             return
@@ -124,6 +131,11 @@ class Extensions(commands.Cog):
 
         log.debug("%s requested a list of all cogs. Returning a paginated list.", ctx.author)
         await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
+
+    @staticmethod
+    async def convert_extensions(ctx: Context, extensions: str) -> list[str]:
+        """Convert a whitespace separated string of extension names, as slash commands cannot take variadic args."""
+        return [await Extension().convert(ctx, extension) for extension in extensions.split()]
 
     def group_extension_statuses(self) -> t.Mapping[str, str]:
         """Return a mapping of extension names and statuses to their categories."""

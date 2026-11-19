@@ -2,8 +2,8 @@ import difflib
 import re
 import unicodedata
 
-from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord import Colour, Embed, app_commands, utils
+from discord.ext.commands import BadArgument, Cog, Context, Converter, Greedy, clean_content, has_any_role
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
@@ -13,6 +13,7 @@ from bot.decorators import in_whitelist, not_in_blacklist
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
+from bot.utils.hybrid import hybrid_command
 
 log = get_logger(__name__)
 
@@ -40,13 +41,22 @@ Namespaces are one honking great idea -- let's do more of those!
 LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.python_community)
 
 
+class PollOption(Converter):
+    """Passes a single (possibly quoted) word through unchanged, so it can be used with `Greedy`."""
+
+    async def convert(self, ctx: Context, argument: str) -> str:
+        """Return the argument as is."""
+        return argument
+
+
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command()
+    @hybrid_command()
+    @app_commands.describe(characters="The unicode characters to look up, up to 50")
     @not_in_blacklist(channels=(Channels.python_general,), override_roles=STAFF_AND_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
@@ -84,11 +94,12 @@ class Utils(Cog):
 
         await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
 
-    @command()
+    @hybrid_command()
+    @app_commands.describe(search_value="An index, a slice or a search term, or leave empty for the full Zen")
     async def zen(
         self,
         ctx: Context,
-        search_value: str | None,
+        search_value: str | None = None,
     ) -> None:
         """
         Show the Zen of Python.
@@ -199,9 +210,10 @@ class Utils(Cog):
         embed.description = best_match
         await ctx.send(embed=embed)
 
-    @command(aliases=("snf", "snfl", "sf"))
+    @hybrid_command(aliases=("snf", "snfl", "sf"))
+    @app_commands.describe(snowflakes="One or more Discord snowflakes (IDs), separated by spaces")
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_AND_COMMUNITY_ROLES)
-    async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
+    async def snowflake(self, ctx: Context, snowflakes: Greedy[Snowflake]) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
             raise BadArgument("At least one snowflake must be provided.")
@@ -226,9 +238,18 @@ class Utils(Cog):
             allowed_roles=MODERATION_ROLES,
         )
 
-    @command(aliases=("poll",))
+    @hybrid_command(aliases=("poll",))
+    @app_commands.describe(
+        title="The title of the poll",
+        options='The options, separated by spaces (use "quotes" around options containing spaces)',
+    )
     @has_any_role(*MODERATION_ROLES, *LEADS_AND_COMMUNITY)
-    async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
+    async def vote(
+        self,
+        ctx: Context,
+        title: clean_content(fix_channel_mentions=True),
+        options: Greedy[PollOption],
+    ) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
 

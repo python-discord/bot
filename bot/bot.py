@@ -3,7 +3,10 @@ import contextlib
 from sys import exception
 
 import aiohttp
+import discord
 from discord.errors import Forbidden
+from discord.ext.commands import Context
+from discord.ext.commands.view import StringView
 from pydis_core import BotBase
 from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import new_scope, start_transaction
@@ -12,6 +15,20 @@ from bot import constants, exts
 from bot.log import get_logger
 
 log = get_logger("bot")
+
+class BotContext(Context):
+    """A context whose `send_help` uses the help cog, as the bot has no discord.py help command."""
+
+    async def send_help(self, *args: object) -> None:
+        """Send help for the given command, group, or cog, defaulting to the invoked command."""
+        help_cog = self.bot.get_cog("Help")
+        entity = args[0] if args else self.command
+        if help_cog is None or entity is None:
+            return
+
+        formatter = type(help_cog.formatter)()
+        formatter.context = self
+        await formatter.send_help_for(getattr(entity, "qualified_name", str(entity)))
 
 
 class StartupError(Exception):
@@ -28,11 +45,18 @@ class Bot(BotBase):
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
+        self._finished_extensions: set[str] = set()
+        self._extensions_finished_loading = asyncio.Event()
 
     async def load_extension(self, name: str, *args, **kwargs) -> None:
         """Extend D.py's load_extension function to also record sentry performance stats."""
-        with start_transaction(op="cog-load", name=name):
-            await super().load_extension(name, *args, **kwargs)
+        try:
+            with start_transaction(op="cog-load", name=name):
+                await super().load_extension(name, *args, **kwargs)
+        finally:
+            self._finished_extensions.add(name)
+            if self.all_extensions and self._finished_extensions.issuperset(self.all_extensions):
+                self._extensions_finished_loading.set()
 
     async def ping_services(self) -> None:
         """A helper to make sure all the services the bot relies on are available on startup."""
@@ -54,6 +78,66 @@ class Bot(BotBase):
         """Default async initialisation method for discord.py."""
         await super().setup_hook()
         await self.load_extensions(exts)
+
+    async def _sync_app_commands(self) -> None:
+        """Sync application commands to the bot's guild only, clearing any previously registered global commands."""
+        # The base class only waits for the extension loading tasks to be created, not for them to finish. Cogs that
+        # do work in `cog_load` (e.g. fetching from the site API) only register their commands once that completes.
+        await self._extension_loading_task
+        await self._extensions_finished_loading.wait()
+        guild = discord.Object(self.guild_id)
+        self.tree.copy_global_to(guild=guild)
+        self.tree.clear_commands(guild=None)
+        await self.tree.sync(guild=guild)
+        # The global tree is now empty, so this removes any stale global commands.
+        await self.tree.sync()
+
+    async def get_context(
+        self,
+        origin: discord.Message | discord.Interaction,
+        /,
+        *,
+        cls: type[Context] = BotContext,
+    ) -> Context:
+        """
+        Get the invocation context, treating a mention followed directly by a code block as an eval command.
+
+        For example `@Python ```py\nprint("hello")\n``` ` is run as if it were `@Python eval ```py ...``` `.
+        """
+        ctx = await super().get_context(origin, cls=cls)
+
+        if isinstance(origin, discord.Message):
+            self._skip_whitespace_after_prefix(ctx, origin)
+
+        if isinstance(origin, discord.Message) and not ctx.valid and ctx.prefix is not None:
+            rest = origin.content[len(ctx.prefix):].lstrip()
+            eval_command = self.get_command("eval")
+            if eval_command is not None and rest.startswith("```"):
+                ctx.command = eval_command
+                ctx.invoked_with = "eval"
+                ctx.view = StringView(f"eval {rest}")
+                ctx.view.index = len("eval")
+
+        return ctx
+
+    def _skip_whitespace_after_prefix(self, ctx: Context, message: discord.Message) -> None:
+        """
+        Find the command again if the prefix is followed by extra whitespace, e.g. `@Python  ping`.
+
+        discord.py only allows for the whitespace that is part of the prefix, so a second space leaves no command name.
+        """
+        if ctx.command is not None or ctx.prefix is None:
+            return
+
+        view = StringView(message.content)
+        if not view.skip_string(ctx.prefix):
+            return
+
+        view.skip_ws()
+        invoker = view.get_word()
+        ctx.view = view
+        ctx.invoked_with = invoker
+        ctx.command = self.all_commands.get(invoker)
 
     async def on_error(self, event: str, /, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""

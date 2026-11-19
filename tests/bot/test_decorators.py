@@ -1,8 +1,11 @@
+import asyncio
 import collections
 import unittest
 import unittest.mock
 
-from bot import constants
+import arrow
+
+from bot import constants, decorators
 from bot.decorators import in_whitelist
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
@@ -147,3 +150,79 @@ class InWhitelistTests(unittest.TestCase):
                 self.assertRaisesRegex(InWhitelistCheckFailure, exception_message),
             ):
                 predicate(test_case.ctx)
+
+
+class SlashCommandDecoratorTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the decorators when the command is invoked as a slash command."""
+
+    def setUp(self):
+        self.interaction = helpers.MockInteraction()
+        self.ctx = helpers.MockContext(interaction=self.interaction)
+        self.ctx.defer = unittest.mock.AsyncMock()
+        self.ctx.guild.get_channel = unittest.mock.Mock(return_value=helpers.MockTextChannel(id=555))
+        self.ctx.channel = helpers.MockTextChannel(id=111)
+        self.ctx.author.roles = []
+
+    async def test_redirect_output_slash(self):
+        """The command should run in a detached context sending to the destination, without touching the message."""
+        called_with = []
+
+        async def command(cog, ctx):
+            called_with.append(ctx)
+
+        wrapped = decorators.redirect_output(555)(command)
+
+        with unittest.mock.patch(
+            "bot.decorators.scheduling.create_task", side_effect=lambda coro: coro.close()
+        ) as task:
+            await wrapped(None, self.ctx)
+
+        redirect_channel = self.ctx.guild.get_channel.return_value
+        self.ctx.defer.assert_awaited_once_with(ephemeral=True)
+        redirect_channel.send.assert_awaited_once()
+        task.assert_called_once()
+        self.ctx.send.assert_awaited_once()
+        self.assertTrue(self.ctx.send.call_args.kwargs["ephemeral"])
+        self.ctx.message.delete.assert_not_called()
+        self.assertIn(redirect_channel.mention, self.ctx.send.call_args.args[0])
+
+    async def test_redirect_output_slash_context_is_detached(self):
+        """The context passed to the command should send to the destination channel, not the interaction."""
+        ran = asyncio.Event()
+        contexts = []
+
+        async def command(cog, ctx):
+            contexts.append(ctx)
+            ran.set()
+
+        wrapped = decorators.redirect_output(555)(command)
+        await wrapped(None, self.ctx)
+        await asyncio.wait_for(ran.wait(), timeout=1)
+
+        redirected_ctx = contexts[0]
+        self.assertIsNone(redirected_ctx.interaction)
+        self.assertIs(redirected_ctx.channel, self.ctx.guild.get_channel.return_value)
+        self.assertIs(self.ctx.interaction, self.interaction)
+
+    async def test_ensure_future_timestamp_slash_is_ephemeral(self):
+        """The past timestamp warning should only be shown to the invoking user."""
+        wrapped = decorators.ensure_future_timestamp(2)(_async_command)
+
+        await wrapped(None, self.ctx, arrow.utcnow().shift(days=-1))
+
+        self.ctx.send.assert_awaited_once_with(":x: Provided timestamp is in the past.", ephemeral=True)
+
+    async def test_respect_role_hierarchy_slash_is_ephemeral(self):
+        """The hierarchy warning should only be shown to the invoking user."""
+        target = helpers.MockMember(top_role=helpers.MockRole(position=5))
+        self.ctx.author = helpers.MockMember(top_role=helpers.MockRole(position=1))
+        wrapped = decorators.respect_role_hierarchy(2)(_async_command)
+
+        await wrapped(None, self.ctx, target)
+
+        self.ctx.send.assert_awaited_once()
+        self.assertTrue(self.ctx.send.call_args.kwargs["ephemeral"])
+
+
+async def _async_command(cog, ctx, arg):
+    """A command callback used to test the decorators."""
