@@ -110,9 +110,10 @@ async def wait_for_deletion(
     except discord.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
-    except discord.HTTPException:
-        if not isinstance(message.channel, discord.Thread):
-            # Threads might not be accessible by the time the timeout expires
+    except discord.HTTPException as e:
+        # Threads might be archived by the time the timeout expires. The channel of followup
+        # messages is a PartialMessageable, so check the error code rather than the channel type.
+        if not (isinstance(message.channel, discord.Thread) or e.code == 50083):
             raise
 
 
