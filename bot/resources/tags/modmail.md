@@ -2,7 +2,7 @@
 embed:
     title: "Contacting the moderation team via ModMail"
 ---
-<@!683001325440860340> is a bot that will relay your messages to our moderation team, so that you can start a conversation with the moderation team. Your messages will be relayed to the entire moderator team, who will be able to respond to you via the bot.
+<@!1396234725462511776> is a bot that will relay your messages to our moderation team, so that you can start a conversation with the moderation team. Your messages will be relayed to the entire moderator team, who will be able to respond to you via the bot.
 
 It supports attachments, codeblocks, and reactions. As communication happens over direct messages, the conversation will stay between you and the mod team.
 

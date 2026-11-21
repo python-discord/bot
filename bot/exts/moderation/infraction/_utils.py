@@ -36,7 +36,7 @@ RULES_URL = "https://pythondiscord.com/pages/rules"
 Infraction = dict[str, str | int | bool]
 
 APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
-MODMAIL_ACCOUNT_ID = "683001325440860340"
+MODMAIL_ACCOUNT_ID = "1396234725462511776"
 
 INFRACTION_TITLE = "Please review our rules"
 INFRACTION_APPEAL_SERVER_FOOTER = f"\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
