@@ -141,8 +141,8 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
             ([], None, True),
         )
 
-        for messages, last_review_timestamp, expected in cases:
-            with self.subTest(messages=messages, expected=expected):
+        for i, (messages, last_review_timestamp, expected) in enumerate(cases):
+            with self.subTest(test_case=i, expected=expected):
                 self.voting_channel.history = AsyncIterator(messages)
 
                 cache_get_mock = AsyncMock(return_value=last_review_timestamp)
